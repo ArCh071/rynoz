@@ -1,6 +1,5 @@
 import 'dart:developer' as devtools show log;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 
 extension Log on Object {
@@ -97,53 +96,53 @@ extension Context on BuildContext {
 
   void get rootPop => Navigator.of(this, rootNavigator: true).pop();
 
-  Future<void> get circularLoaderPopUp => showGeneralDialog(
-        context: this,
-        barrierColor: Colors.black.withOpacity(0.3),
-        barrierDismissible: false,
-        barrierLabel: "",
-        useRootNavigator: true,
-        transitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (_, __, ___) {
-          return WillPopScope(
-            child: const SizedBox.expand(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  CircularProgressIndicator(
-                    backgroundColor: Colors.white,
-                  )
-                ],
-              ),
-            ),
-            onWillPop: () async {
-              Navigator.pop(this);
-              return false;
-            },
-          );
-        },
-      );
+  // Future<void> get circularLoaderPopUp => showGeneralDialog(
+  //       context: this,
+  //       barrierColor: Colors.black.withOpacity(0.3),
+  //       barrierDismissible: false,
+  //       barrierLabel: "",
+  //       useRootNavigator: true,
+  //       transitionDuration: const Duration(milliseconds: 400),
+  //       pageBuilder: (_, __, ___) {
+  //         return WillPopScope(
+  //           child: const SizedBox.expand(
+  //             child: Column(
+  //               mainAxisAlignment: MainAxisAlignment.center,
+  //               children: <Widget>[
+  //                 CircularProgressIndicator(
+  //                   backgroundColor: Colors.white,
+  //                 )
+  //               ],
+  //             ),
+  //           ),
+  //           onWillPop: () async {
+  //             Navigator.pop(this);
+  //             return false;
+  //           },
+  //         );
+  //       },
+  //     );
 
-  double validateScale({double defaultVal = 0.0}) {
-    double value = MediaQuery.of(this).textScaleFactor;
-    double pixelRatio = ScreenUtil().pixelRatio ?? 0.0;
-    0;
-    if (value <= 1.0) {
-      defaultVal = defaultVal;
-    } else if (value >= 1.3) {
-      defaultVal = value - 0.2;
-    } else if (value >= 1.1) {
-      defaultVal = value - 0.1;
-    }
-    if (pixelRatio <= 3.0) {
-      defaultVal = defaultVal + 0;
-    } else if (value >= 3.15) {
-      defaultVal = defaultVal + 0.6;
-    } else if (value >= 1.1) {
-      defaultVal = defaultVal + 0.8;
-    }
-    return defaultVal;
-  }
+  // double validateScale({double defaultVal = 0.0}) {
+  //   double value = MediaQuery.of(this).textScaleFactor;
+  //   double pixelRatio = ScreenUtil().pixelRatio ?? 0.0;
+  //   0;
+  //   if (value <= 1.0) {
+  //     defaultVal = defaultVal;
+  //   } else if (value >= 1.3) {
+  //     defaultVal = value - 0.2;
+  //   } else if (value >= 1.1) {
+  //     defaultVal = value - 0.1;
+  //   }
+  //   if (pixelRatio <= 3.0) {
+  //     defaultVal = defaultVal + 0;
+  //   } else if (value >= 3.15) {
+  //     defaultVal = defaultVal + 0.6;
+  //   } else if (value >= 1.1) {
+  //     defaultVal = defaultVal + 0.8;
+  //   }
+  //   return defaultVal;
+  // }
 }
 
 extension TextExtension on Text {

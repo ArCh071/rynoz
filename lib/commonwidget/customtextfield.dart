@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:rynoz/helper/color_palette.dart';
 
-class CustomText extends StatelessWidget {
+class CustomText extends StatefulWidget {
   final double? height;
   final double? width;
   final BoxDecoration? decoration;
@@ -33,6 +33,7 @@ class CustomText extends StatelessWidget {
   final int? minLines;
   final bool? expands;
   final int? maxLength;
+  final IconData? prefixIcon;
   final ValueChanged<String>? onChanged;
   final GestureTapCallback? onTap;
   final VoidCallback? onEditingComplete;
@@ -57,6 +58,7 @@ class CustomText extends StatelessWidget {
   final String? restorationId;
   final bool? enableIMEPersonalizedLearning;
   final MouseCursor? mouseCursor;
+  final bool makePasswordField;
   final String? prefixWidget;
   final Widget? suffixWidget;
   final String? semanticlabel;
@@ -69,8 +71,10 @@ class CustomText extends StatelessWidget {
       this.width,
       this.decoration,
       this.controller,
+      this.prefixIcon,
       required this.semanticlabel,
       this.initialValue,
+      this.makePasswordField = false,
       this.focusNode,
       this.inputDecoration,
       this.keyboardType,
@@ -126,92 +130,120 @@ class CustomText extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<CustomText> createState() => _CustomTextState();
+}
+
+class _CustomTextState extends State<CustomText> {
+  bool enableObscure = true;
+  @override
   Widget build(BuildContext context) {
     return Stack(
       alignment: AlignmentDirectional.center,
       children: [
         Container(
-          height: height ?? 42.h,
-          width: width ?? double.maxFinite,
-          decoration: decoration ??
+          height: widget.height ?? 42.h,
+          width: widget.width ?? double.maxFinite,
+          decoration: widget.decoration ??
               BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.r),
-                  color: HexColor("#F1F5FE")),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
         ),
         TextFormField(
-          controller: controller,
-          initialValue: initialValue,
-          focusNode: focusNode,
-          decoration: inputDecoration ??
+          controller: widget.controller,
+          initialValue: widget.initialValue,
+          focusNode: widget.focusNode,
+          // cursorOpacityAnimates: true,
+          decoration: widget.inputDecoration ??
               InputDecoration(
-                  prefixIcon: prefixWidget != null
+                  prefixIcon: widget.prefixIcon != null
+                      ? Icon(
+                          widget.prefixIcon,
+                          size: 20.sp,
+                          color: Colors.grey.shade600,
+                        )
+                      : null,
+                  semanticCounterText: widget.semanticlabel,
+                  suffixIcon: widget.makePasswordField
                       ? Padding(
-                          padding: EdgeInsets.all(15.h),
-                          child: Image.asset(
-                            prefixWidget!,
-                            height: 10.h,
-                            color: const Color.fromARGB(255, 140, 136, 136),
-                            fit: BoxFit.contain,
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: IconButton(
+                            highlightColor: Colors.white,
+                            splashColor: Colors.white,
+                            icon: Icon(
+                              enableObscure
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              size: 20.r,
+                              color: enableObscure
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade700,
+                            ),
+                            onPressed: () => setState(() {
+                              enableObscure = !enableObscure;
+                            }),
                           ),
                         )
                       : null,
-                  semanticCounterText: semanticlabel,
-                  suffixIcon: suffixWidget ?? const SizedBox.shrink(),
                   border: InputBorder.none,
                   disabledBorder: InputBorder.none,
-                  enabledBorder: InputBorder.none,
+                  enabledBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color: Color.fromARGB(255, 207, 207, 207))),
                   errorBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
+                  focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.black)),
                   focusedErrorBorder: InputBorder.none,
-                  hintText: hintText,
-                  hintStyle: hintStyle,
+                  hintText: widget.hintText,
+                  hintStyle: widget.hintStyle,
                   isDense: true,
-                  contentPadding:
-                      paddings ?? EdgeInsets.only(left: 10.w, top: 8.h)),
-          keyboardType: keyboardType,
-          textCapitalization: textCapitalization ?? TextCapitalization.none,
-          textInputAction: textInputAction,
-          style: style,
-          strutStyle: strutStyle,
-          textDirection: textDirection,
-          textAlign: textAlign ?? TextAlign.start,
-          textAlignVertical: textAlignVertical,
-          autofocus: autofocus ?? false,
-          readOnly: readOnly ?? false,
-          showCursor: showCursor,
-          obscuringCharacter: obscuringCharacter ?? '•',
-          obscureText: obscureText ?? false,
-          autocorrect: autocorrect ?? true,
-          smartDashesType: smartDashesType,
-          smartQuotesType: smartQuotesType,
-          enableSuggestions: enableSuggestions ?? true,
-          maxLengthEnforcement: maxLengthEnforcement,
-          minLines: minLines,
-          expands: expands ?? false,
-          maxLength: maxLength,
-          onChanged: onChanged,
-          onTap: onTap,
-          onEditingComplete: onEditingComplete,
-          onFieldSubmitted: onFieldSubmitted,
-          onSaved: onSaved,
-          validator: validator,
-          inputFormatters: inputFormatters,
-          enabled: enabled,
-          cursorWidth: cursorWidth ?? 2.0,
-          cursorHeight: cursorHeight,
-          cursorRadius: cursorRadius,
-          cursorColor: cursorColor,
-          keyboardAppearance: keyboardAppearance,
-          scrollPadding: scrollPadding ?? const EdgeInsets.all(20.0),
-          enableInteractiveSelection: enableInteractiveSelection,
-          selectionControls: selectionControls,
-          buildCounter: buildCounter,
-          scrollPhysics: scrollPhysics,
-          autofillHints: autofillHints,
-          scrollController: scrollController,
-          restorationId: restorationId,
-          enableIMEPersonalizedLearning: enableIMEPersonalizedLearning ?? true,
-          mouseCursor: mouseCursor,
+                  contentPadding: widget.paddings ??
+                      EdgeInsets.only(left: 10.w, top: 18.h)),
+          keyboardType: widget.keyboardType,
+          textCapitalization:
+              widget.textCapitalization ?? TextCapitalization.none,
+          textInputAction: widget.textInputAction,
+          style: widget.style,
+          strutStyle: widget.strutStyle,
+          textDirection: widget.textDirection,
+          textAlign: widget.textAlign ?? TextAlign.start,
+          textAlignVertical: widget.textAlignVertical,
+          autofocus: widget.autofocus ?? false,
+          readOnly: widget.readOnly ?? false,
+          showCursor: widget.showCursor,
+          obscuringCharacter: widget.obscuringCharacter ?? '•',
+          obscureText: widget.makePasswordField ? enableObscure : false,
+          autocorrect: widget.autocorrect ?? true,
+          smartDashesType: widget.smartDashesType,
+          smartQuotesType: widget.smartQuotesType,
+          enableSuggestions: widget.enableSuggestions ?? true,
+          maxLengthEnforcement: widget.maxLengthEnforcement,
+          minLines: widget.minLines,
+          expands: widget.expands ?? false,
+          maxLength: widget.maxLength,
+          onChanged: widget.onChanged,
+          onTap: widget.onTap,
+          onEditingComplete: widget.onEditingComplete,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          onSaved: widget.onSaved,
+          validator: widget.validator,
+          inputFormatters: widget.inputFormatters,
+          enabled: widget.enabled,
+          cursorWidth: widget.cursorWidth ?? 2.0,
+          cursorHeight: widget.cursorHeight,
+          cursorRadius: widget.cursorRadius,
+          cursorColor: widget.cursorColor,
+          keyboardAppearance: widget.keyboardAppearance,
+          scrollPadding: widget.scrollPadding ?? const EdgeInsets.all(20.0),
+          enableInteractiveSelection: widget.enableInteractiveSelection,
+          selectionControls: widget.selectionControls,
+          buildCounter: widget.buildCounter,
+          scrollPhysics: widget.scrollPhysics,
+          autofillHints: widget.autofillHints,
+          scrollController: widget.scrollController,
+          restorationId: widget.restorationId,
+          enableIMEPersonalizedLearning:
+              widget.enableIMEPersonalizedLearning ?? true,
+          mouseCursor: widget.mouseCursor,
         ),
       ],
     );

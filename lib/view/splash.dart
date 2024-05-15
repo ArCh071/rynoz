@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:rynoz/helper/appconfig.dart';
+import 'package:provider/provider.dart';
 import 'package:rynoz/repositories/sharedprefs/shared_prefs.dart';
 import 'package:rynoz/view/home.dart';
 import 'package:rynoz/view/initialslider.dart';
+import 'package:rynoz/view_model/home_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,11 +18,25 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void initState() {
+    final home = context.read<HomeProvider>();
+
     Future.delayed(const Duration(seconds: 2), () async {
-      String? token = await sharedPrefs.getAuthToken();
-      if (token != null) {
+      String? id = await sharedPrefs.getid();
+      print("..id..$id");
+      if (id != null) {
+        home.getdata();
+        await home.getcategory();
+        home.getpaymentsub();
+        home.getpaymentmode();
+        await home.getbranch();
+        home.getminimumstock();
+        home.getexpirystock();
+        await home.getmonthwisegraphs(
+            branchid: home.branchdata?.data![0].branchId);
+        await home.getproduct(
+            count: 5, categoryid: home.categorydata?.data![0].categoryID);
         Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
+          builder: (context) => const Home1(),
         ));
       } else {
         Navigator.of(context).pushReplacement(MaterialPageRoute(

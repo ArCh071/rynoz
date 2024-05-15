@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get_it/get_it.dart';
+import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customtextfield.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
 import 'package:rynoz/helper/helpers.dart';
-import 'package:rynoz/repositories/auth_service.dart';
 import 'package:rynoz/view/home.dart';
 import 'package:rynoz/view/reset_password.dart';
+import 'package:rynoz/view_model/home_provider.dart';
 
 class InitialSliderScreen extends StatefulWidget {
   const InitialSliderScreen({Key? key}) : super(key: key);
@@ -213,7 +213,7 @@ class FinalSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final services = GetIt.instance<AuthServices>();
+    final homeprovider = context.read<HomeProvider>();
     final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
     final TextEditingController password = TextEditingController();
 
@@ -265,6 +265,7 @@ class FinalSlider extends StatelessWidget {
                     semanticlabel: "enter your username",
                     hintText: "ABC123",
                     hintStyle: FontPalette.grey16400,
+                    textInputAction: TextInputAction.next,
                   ),
                   15.verticalSpace,
                   Row(
@@ -278,7 +279,10 @@ class FinalSlider extends StatelessWidget {
                   ),
                   5.verticalSpace,
                   CustomText(
+                    obscureText: true,
+                    makePasswordField: true,
                     controller: password,
+                    textInputAction: TextInputAction.done,
                     semanticlabel: "enter your password",
                     hintText: "******",
                     hintStyle: FontPalette.grey16400,
@@ -300,21 +304,39 @@ class FinalSlider extends StatelessWidget {
 
                                 if (isLoading.value) return;
                                 isLoading.value = true;
-                                final res = await services
+                                await homeprovider
                                     .login(
-                                        memeberid: memberid.text,
+                                        username: memberid.text,
                                         password: password.text)
                                     .catchError((error) {
-                                  print(error);
                                   isLoading.value = false;
-                                  return false;
+                                  return error;
                                 });
                                 isLoading.value = false;
 
-                                if (res ?? false) {
+                                if (homeprovider.logindata?.status == 200 &&
+                                    homeprovider.logindata?.data![0].isActive ==
+                                        true) {
                                   Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (context) => const HomeScreen(),
+                                    builder: (context) => const Home1(),
                                   ));
+                                  final home = context.read<HomeProvider>();
+                                  await home.getcategory();
+                                  home.getpaymentsub();
+                                  home.getpaymentmode();
+                                  await home.getbranch();
+                                  home.getminimumstock();
+                                  home.getexpirystock();
+                                  await home.getmonthwisegraphs(
+                                      branchid:
+                                          home.branchdata?.data![0].branchId);
+                                  await home.getproduct(
+                                      count: 5,
+                                      categoryid: home
+                                          .categorydata?.data![0].categoryID);
+                                } else {
+                                  Helpers.showToast(
+                                      "${homeprovider.logindata?.message}");
                                 }
                               } else {
                                 Helpers.showToast("Field is empty");
