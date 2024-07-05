@@ -243,7 +243,7 @@ Either<ResponseError, http.Response> checkHttpStatus(http.Response response) {
     case 401:
       {
         final body = jsonDecode(response.body);
-        sharedPrefs.clearToken();
+        sharedPrefs.clearall();
         if (body["message"] == "Unauthenticated") {
           if (navigatorKey.currentContext != null) {
             Future.delayed(

@@ -25,6 +25,8 @@ class FontPalette {
 
   static TextStyle blue11500 = GoogleFonts.roboto(
       fontSize: 11.sp, color: HexColor("#2388C4"), fontWeight: FontWeight.w500);
+  static TextStyle black10500 = GoogleFonts.roboto(
+      fontSize: 10.sp, color: Colors.black, fontWeight: FontWeight.w500);
 
   //black
   static TextStyle black35700 = GoogleFonts.roboto(

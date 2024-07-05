@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
@@ -8,7 +7,6 @@ import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:rynoz/view_model/home_provider.dart';
 
 class StockReport extends StatefulWidget {
@@ -71,12 +69,13 @@ class _StockReportState extends State<StockReport> {
       body: SingleChildScrollView(
         child: SafeArea(
             child: Consumer<HomeProvider>(builder: (context, value, child) {
-          int len = value.salesreportdata?.data?.length ?? 0;
-          if (value.salesreportdata?.data != null) {
+          int len = value.stockreportdata?.data?.length ?? 0;
+          if (value.stockreportdata?.data != null) {
+            len = value.stockreportdata?.data?.length ?? 0;
             totalAmount = 0;
             for (int i = 0; i < len; i++) {
-              totalAmount += double.parse(
-                  "${value.salesreportdata?.data![i].totalGrossAmount}");
+              totalAmount +=
+                  double.parse("${value.stockreportdata?.data![i].mrp}");
             }
           }
 
@@ -91,11 +90,12 @@ class _StockReportState extends State<StockReport> {
                       borderradius: 4.r,
                       child: Center(
                           child: TextField(
+                        textAlignVertical: TextAlignVertical.center,
                         decoration: InputDecoration(
                             border: InputBorder.none,
                             hintText: "Barcode",
-                            contentPadding:
-                                EdgeInsets.symmetric(horizontal: 10.w),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 7.h),
                             hintStyle: FontPalette.grey14500),
                       ))),
                   5.horizontalSpace,
@@ -106,11 +106,12 @@ class _StockReportState extends State<StockReport> {
                           borderradius: 4.r,
                           child: Center(
                               child: TextField(
+                            textAlignVertical: TextAlignVertical.center,
                             decoration: InputDecoration(
                                 border: InputBorder.none,
                                 hintText: "Product Name",
-                                contentPadding:
-                                    EdgeInsets.symmetric(horizontal: 10.w),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10.w, vertical: 7.h),
                                 hintStyle: FontPalette.grey14500),
                           )))),
                 ],
@@ -403,11 +404,11 @@ class _StockReportState extends State<StockReport> {
                             onPressed: () async {
                               isLoading.value = true;
                               totalAmount = 0;
-                              // await value.getstockreport(
-                              //     barcode: barcode.text,
-                              //     baseon: int.parse(baseon.text),
-                              //     productname: productname.text,
-                              //     type: value.stockselected);
+                              await value.getstockreport(
+                                  barcode: barcode.text,
+                                  baseon: value.baseonselected,
+                                  productname: productname.text,
+                                  type: value.stockselected);
                               isLoading.value = false;
                             },
                           );
@@ -510,85 +511,123 @@ class _StockReportState extends State<StockReport> {
               10.verticalSpace,
               len == 0
                   ? const SizedBox()
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 400.h,
-                            child: ListView.separated(
-                                scrollDirection: Axis.vertical,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) {
-                                  DateTime dateTime = DateTime.parse(
-                                      "${value.salesreportdata?.data![index].invoiceDateTime}");
-
-                                  // Convert to Indian Standard Time (IST)
-                                  tz.Location ist =
-                                      tz.getLocation('Asia/Kolkata');
-                                  tz.TZDateTime istDateTime =
-                                      tz.TZDateTime.from(dateTime, ist);
-
-                                  // Format the date/time in IST
-                                  String formattedDateTime =
-                                      DateFormat('dd-MM-yyyy HH:mm:ss a')
-                                          .format(istDateTime);
-
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        boxShadow: [
-                                          BoxShadow(
-                                              blurRadius: 10.r,
-                                              color: const Color.fromARGB(
-                                                  255, 217, 215, 215))
-                                        ],
-                                        borderRadius:
-                                            BorderRadius.circular(7.r),
-                                        border: Border.all(color: Colors.grey)),
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Inv No: ${value.salesreportdata?.data![index].invoiceNo}",
-                                              style: FontPalette.black11500,
-                                            ),
-                                            Text(
-                                              "Inv Date: $formattedDateTime",
-                                              style: FontPalette.black11300,
-                                            )
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Gross Amt: Rs ${value.salesreportdata?.data![index].totalGrossAmount}",
-                                              style: FontPalette.black13500,
-                                            ),
-                                            Text(
-                                              "Mode: ${value.salesreportdata?.data![index].paymentModeName}",
-                                              style: FontPalette.black13500,
-                                            )
-                                          ],
-                                        )
+                  : value.stockreportdata?.data != null
+                      ? SizedBox(
+                          height: 420.h,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(7.r),
+                                  color:
+                                      const Color.fromARGB(255, 238, 236, 236),
+                                ),
+                                child: DataTable(
+                                  columns: const <DataColumn>[
+                                    DataColumn(
+                                      label: Text('Product Id'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Barcode'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Product Name'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('GrossAmt'),
+                                    ),
+                                  ],
+                                  rows: value.stockreportdata!.data!
+                                      .map((invoice) {
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(Text("${invoice.productID}")),
+                                        DataCell(Text("${invoice.barcode}")),
+                                        DataCell(Text(
+                                            invoice.productName.toString())),
+                                        DataCell(Text(invoice.mrp.toString())),
                                       ],
-                                    )
-                                        .verticalPadding(7.h)
-                                        .horizontalPadding(8.w),
-                                  ).horizontalPadding(20.w);
-                                },
-                                separatorBuilder: (context, index) =>
-                                    10.verticalSpace,
-                                itemCount: value.salesreportdata!.data!.length),
+                                    );
+                                  }).toList(),
+                                ),
+                              ).horizontalPadding(20.w),
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                      : const SizedBox(),
+              // SingleChildScrollView(
+              //     child: Column(
+              //       children: [
+              //         SizedBox(
+              //           height: 400.h,
+              //           child: ListView.separated(
+              //               scrollDirection: Axis.vertical,
+              //               physics: const AlwaysScrollableScrollPhysics(),
+              //               shrinkWrap: true,
+              //               itemBuilder: (context, index) {
+
+              //                 return Container(
+              //                   decoration: BoxDecoration(
+              //                       color: Colors.white,
+              //                       boxShadow: [
+              //                         BoxShadow(
+              //                             blurRadius: 10.r,
+              //                             color: const Color.fromARGB(
+              //                                 255, 217, 215, 215))
+              //                       ],
+              //                       borderRadius:
+              //                           BorderRadius.circular(7.r),
+              //                       border: Border.all(color: Colors.grey)),
+              //                   child: Column(
+              //                     children: [
+              //                       Row(
+              //                         mainAxisAlignment:
+              //                             MainAxisAlignment.spaceBetween,
+              //                         children: [
+              //                           Text(
+              //                             "Product Id: ${value.stockreportdata?.data![index].productID}",
+              //                             style: FontPalette.black11500,
+              //                           ),
+              //                           Text(
+              //                             "Barcode: ${value.stockreportdata?.data![index].barcode}",
+              //                             style: FontPalette.black11300,
+              //                           )
+              //                         ],
+              //                       ),
+              //                       Row(
+              //                         children: [
+              //                           Expanded(
+              //                             child: Text(
+              //                               "${value.stockreportdata?.data![index].productName}",
+              //                               style: FontPalette.black13500,
+              //                               maxLines: 3,
+              //                             ),
+              //                           ),
+              //                         ],
+              //                       ),
+              //                       Row(
+              //                         children: [
+              //                           Text(
+              //                             "Gross Amt: Rs ${value.stockreportdata?.data![index].mrp}",
+              //                             style: FontPalette.black13500,
+              //                           ),
+              //                         ],
+              //                       )
+              //                     ],
+              //                   )
+              //                       .verticalPadding(7.h)
+              //                       .horizontalPadding(8.w),
+              //                 ).horizontalPadding(20.w);
+              //               },
+              //               separatorBuilder: (context, index) =>
+              //                   10.verticalSpace,
+              //               itemCount: value.stockreportdata!.data!.length),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
               len == 0
                   ? const SizedBox()
                   : CustomContainer(

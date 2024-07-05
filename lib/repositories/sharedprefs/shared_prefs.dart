@@ -91,7 +91,7 @@ class SharedPrefs {
     await preferences?.setString("icon", icon);
   }
 
-  Future<void> clearToken() async {
+  Future<void> clearall() async {
     await preferences?.clear();
   }
 }

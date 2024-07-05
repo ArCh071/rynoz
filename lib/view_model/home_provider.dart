@@ -2,6 +2,7 @@ import 'package:either_dart/either.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
+import 'package:rynoz/datamodel/companydatamodel.dart';
 import 'package:rynoz/datamodel/expirystock_datamodel.dart';
 import 'package:rynoz/datamodel/getbranch_datamodel.dart';
 import 'package:rynoz/datamodel/getcategory_datamodel.dart';
@@ -15,13 +16,16 @@ import 'package:rynoz/datamodel/monthwise_datamodel.dart';
 import 'package:rynoz/datamodel/paymentmode_datamodel.dart';
 import 'package:rynoz/datamodel/paymentsub_datamodel.dart';
 import 'package:rynoz/datamodel/salesreport_datamodel.dart';
+import 'package:rynoz/datamodel/stockreport_datamodel.dart';
 import 'package:rynoz/datamodel/transactiondatamodel.dart';
 import 'package:rynoz/helper/appconfig.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/helpers.dart';
 import 'package:rynoz/helper/providerhelperclass.dart';
+import 'package:rynoz/main.dart';
 import 'package:rynoz/repositories/network/base_service.dart';
 import 'package:rynoz/repositories/sharedprefs/shared_prefs.dart';
+import 'package:rynoz/view/initialslider.dart';
 
 class HomeProvider extends ProviderHelperClass with ChangeNotifier {
   final services = GetIt.instance<BaseServices>();
@@ -45,15 +49,19 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
     notifyListeners();
   }
 
-  int? selectedmode = 0;
-  int? selectedsub = 0;
+  int? selectedmode;
+  int? selectedsub;
+  String? selectedmodename;
+  String? selectedsubname;
   getselectedmode(int val) {
     selectedmode = val;
+    selectedmodename = paymentmode?.data![val].paymentModeName;
     notifyListeners();
   }
 
   getselectedsub(int val) {
     selectedsub = val;
+    selectedsubname = paymentsub?.data![val].paymentSubName;
     notifyListeners();
   }
 
@@ -69,6 +77,18 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
     notifyListeners();
   }
 
+  String? transstartdate;
+  gettransstartdate(DateTime date) {
+    transstartdate = DateFormat('dd MMMyy').format(date);
+    notifyListeners();
+  }
+
+  String? transendate;
+  gettransenddate(DateTime date) {
+    transendate = DateFormat('dd MMMyy').format(date);
+    notifyListeners();
+  }
+
   String? misstartdate;
   getmisstartdate(DateTime date) {
     misstartdate = DateFormat('dd MMMyy').format(date);
@@ -81,10 +101,12 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
     notifyListeners();
   }
 
-  int? purselectedmode = 0;
+  int? purselectedmode;
+  String? purselectedmodename;
 
   getpurselectedmode(int val) {
     purselectedmode = val;
+    purselectedmodename = paymentmode?.data![val].paymentModeName;
     notifyListeners();
   }
 
@@ -178,12 +200,15 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
     notifyListeners();
   }
 
+  bool showToastFlag = false;
+
   GetBranchdatamodel? branchdata;
   GetCategorydatamodel? categorydata;
   Getpaymentmodedatamodel? paymentmode;
   Getpaymentsubdatamodel? paymentsub;
   GetPurchasereportdatamodel? purchasereportdata;
   SalesreportDatamodel? salesreportdata;
+  StockreportDatamodel? stockreportdata;
   MisreportDatamodel? misreportdata;
   GetVATreportDatamodel? vatreportdata;
   GetminimumstockDatamodel? minimumstockdata;
@@ -192,6 +217,7 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
   ProductDatamodel? getproducts;
   MonthwisegraphDatamodel? getmonthwisegraph;
   TransactionDatamodel? gettransactiondata;
+  CompanyDatamodel? company;
   Future<void> login({String? username, String? password}) async {
     updateLoadState(LoaderState.loading);
     // updateVehicleTypeLoaderState(LoaderState.loading);
@@ -200,21 +226,29 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
       await services.login(password: password, username: username).fold(
         (left) {
           logindata = null;
+          print(left.message);
           Helpers.showToast("${left.message}");
           // updateVehicleTypeLoaderState(LoaderState.error);
         },
         (right) {
-          logindata = right;
-          sharedPrefs.saveid(id: "${logindata?.data![0].userId}");
-          sharedPrefs.savename(name: "${logindata?.data![0].userName}");
-          sharedPrefs.saveaddress(address: "${logindata?.data![0].adress}");
-          sharedPrefs.saveemmail(email: "${logindata?.data![0].emailId}");
-          sharedPrefs.savephone(phone: "${logindata?.data![0].phone}");
-          sharedPrefs.saveicon(icon: "${logindata?.data![0].icon}");
-          sharedPrefs.savenation(nation: "${logindata?.data![0].nationality}");
-          sharedPrefs.savepin(pin: "${logindata?.data![0].pin}");
-          sharedPrefs.savestate(state: "${logindata?.data![0].state}");
-          getdata();
+          print(right);
+          if (right.status == 200 && right.data != null) {
+            logindata = right;
+            sharedPrefs.saveid(id: "${logindata?.data![0].userId}");
+            sharedPrefs.savename(name: "${logindata?.data![0].userName}");
+            sharedPrefs.saveaddress(address: "${logindata?.data![0].adress}");
+            sharedPrefs.saveemmail(email: "${logindata?.data![0].emailId}");
+            sharedPrefs.savephone(phone: "${logindata?.data![0].phone}");
+            sharedPrefs.saveicon(icon: "${logindata?.data![0].icon}");
+            sharedPrefs.savenation(
+                nation: "${logindata?.data![0].nationality}");
+            sharedPrefs.savepin(pin: "${logindata?.data![0].pin}");
+            sharedPrefs.savestate(state: "${logindata?.data![0].state}");
+            getdata();
+          } else {
+            Helpers.showToast("${right.message}");
+            logindata = null;
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -241,8 +275,22 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           if (right.status == 200) {
             branchdata = right;
             updatebranchLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            branchdata = null;
+
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatebranchLoaderState(LoaderState.error);
           } else {
             branchdata = null;
+            // Helpers.showToast("${right.message}");
             updatebranchLoaderState(LoaderState.error);
           }
 
@@ -250,6 +298,52 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
         },
       ).catchError((error) {
         branchdata = null;
+        updatebranchLoaderState(LoaderState.error);
+        debugPrint(error.toString());
+      });
+    } else {
+      branchdata = null;
+      updatebranchLoaderState(LoaderState.networkError);
+    }
+  }
+
+  Future<void> getcompany() async {
+    updatebranchLoaderState(LoaderState.loading);
+    final network = await Helpers.isInternetAvailable();
+    if (network) {
+      await services.getcompany().fold(
+        (left) {
+          company = null;
+          Helpers.showToast("${left.message}");
+          updatebranchLoaderState(LoaderState.error);
+        },
+        (right) {
+          if (right.status == 200) {
+            company = right;
+            updatebranchLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            company = null;
+
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatebranchLoaderState(LoaderState.error);
+          } else {
+            branchdata = null;
+            // Helpers.showToast("${right.message}");
+            updatebranchLoaderState(LoaderState.error);
+          }
+
+          notifyListeners();
+        },
+      ).catchError((error) {
+        company = null;
         updatebranchLoaderState(LoaderState.error);
         debugPrint(error.toString());
       });
@@ -274,14 +368,29 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
         (right) {
           if (right.status == 200) {
             categorydata = right;
-            print(categorydata);
+
+            updatecategoryLoaderState(LoaderState.loaded);
+            updateLoadState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            categorydata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatecategoryLoaderState(LoaderState.error);
+            updateLoadState(LoaderState.error);
           } else {
             categorydata = null;
+            // Helpers.showToast("${right.message}");
             updatecategoryLoaderState(LoaderState.error);
             updateLoadState(LoaderState.error);
           }
-          updatecategoryLoaderState(LoaderState.loaded);
-          updateLoadState(LoaderState.loaded);
+
           notifyListeners();
         },
       ).catchError((error) {
@@ -309,8 +418,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepaymentsubLoaderState(LoaderState.error);
         },
         (right) {
-          paymentsub = right;
-          updatepaymentsubLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            paymentsub = right;
+            updatepaymentsubLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            paymentsub = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepaymentsubLoaderState(LoaderState.error);
+          } else {
+            paymentsub = null;
+            // Helpers.showToast("${right.message}");
+            updatepaymentsubLoaderState(LoaderState.error);
+          }
+
           notifyListeners();
         },
       ).catchError((error) {
@@ -335,8 +463,26 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepaymentmodeLoaderState(LoaderState.error);
         },
         (right) {
-          paymentmode = right;
-          updatepaymentmodeLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            paymentmode = right;
+            updatepaymentmodeLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            paymentmode = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepaymentmodeLoaderState(LoaderState.error);
+          } else {
+            paymentmode = null;
+            // Helpers.showToast("${right.message}");
+            updatepaymentmodeLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -365,11 +511,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepurchasereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          purchasereportdata = right;
-          purchasereportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatepurchasereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            purchasereportdata = right;
+
+            updatepurchasereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            purchasereportdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          } else {
+            purchasereportdata = null;
+            // Helpers.showToast("${right.message}");
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -394,8 +556,26 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updateminimumstockdataLoaderState(LoaderState.error);
         },
         (right) {
-          minimumstockdata = right;
-          updateminimumstockdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            minimumstockdata = right;
+            updateminimumstockdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            minimumstockdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updateminimumstockdataLoaderState(LoaderState.error);
+          } else {
+            minimumstockdata = null;
+            // Helpers.showToast("${right.message}");
+            updateminimumstockdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -420,8 +600,26 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updateexpirystockdataLoaderState(LoaderState.error);
         },
         (right) {
-          expirystockdata = right;
-          updateexpirystockdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            expirystockdata = right;
+            updateexpirystockdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            expirystockdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updateexpirystockdataLoaderState(LoaderState.error);
+          } else {
+            expirystockdata = null;
+            // Helpers.showToast("${right.message}");
+            updateexpirystockdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -453,11 +651,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepurchasereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          salesreportdata = right;
-          salesreportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatepurchasereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            salesreportdata = right;
+
+            updatepurchasereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            salesreportdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepaymentsubLoaderState(LoaderState.error);
+          } else {
+            salesreportdata = null;
+            // Helpers.showToast("${right.message}");
+            updatepaymentsubLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -487,11 +701,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepurchasereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          vatreportdata = right;
-          vatreportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatepurchasereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            vatreportdata = right;
+
+            updatepurchasereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            vatreportdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          } else {
+            vatreportdata = null;
+            // Helpers.showToast("${right.message}");
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -523,20 +753,38 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatestockereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          salesreportdata = right;
-          salesreportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatestockereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            stockreportdata = right;
+            // salesreportdata!.data!.isEmpty
+            //     ? Helpers.showToast("No data found")
+            //     : null;
+            updatestockereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            stockreportdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatestockereportdataLoaderState(LoaderState.error);
+          } else {
+            stockreportdata = null;
+            // Helpers.showToast("${right.message}");
+            updatestockereportdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
-        salesreportdata = null;
+        stockreportdata = null;
         updatestockereportdataLoaderState(LoaderState.error);
         debugPrint(error.toString());
       });
     } else {
-      salesreportdata = null;
+      stockreportdata = null;
       updatestockereportdataLoaderState(LoaderState.networkError);
     }
   }
@@ -554,11 +802,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepurchasereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          misreportdata = right;
-          misreportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatepurchasereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            misreportdata = right;
+
+            updatepurchasereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            misreportdata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          } else {
+            misreportdata = null;
+            // Helpers.showToast("${right.message}");
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -583,8 +847,26 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updateproductdataLoaderState(LoaderState.error);
         },
         (right) {
-          getproducts = right;
-          updateproductdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            getproducts = right;
+            updateproductdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            getproducts = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updateproductdataLoaderState(LoaderState.error);
+          } else {
+            getproducts = null;
+            // Helpers.showToast("${right.message}");
+            updateproductdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -609,8 +891,26 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updateproductdataLoaderState(LoaderState.error);
         },
         (right) {
-          getmonthwisegraph = right;
-          updateproductdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            getmonthwisegraph = right;
+            updateproductdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            getmonthwisegraph = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updateproductdataLoaderState(LoaderState.error);
+          } else {
+            getmonthwisegraph = null;
+            // Helpers.showToast("${right.message}");
+            updateproductdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {
@@ -642,11 +942,27 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
           updatepurchasereportdataLoaderState(LoaderState.error);
         },
         (right) {
-          gettransactiondata = right;
-          vatreportdata!.data!.isEmpty
-              ? Helpers.showToast("No data found")
-              : null;
-          updatepurchasereportdataLoaderState(LoaderState.loaded);
+          if (right.status == 200) {
+            gettransactiondata = right;
+
+            updatepurchasereportdataLoaderState(LoaderState.loaded);
+          } else if (right.status == 500) {
+            gettransactiondata = null;
+            sharedPrefs.clearall();
+            navigatorKey.currentState?.pushReplacement(MaterialPageRoute(
+              builder: (context) => const FinalSlider(),
+            ));
+            if (showToastFlag == false) {
+              // Helpers.showToast("${right.message}");
+              showToastFlag = true;
+              Helpers.showToast("Please sign in");
+            }
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          } else {
+            gettransactiondata = null;
+            // Helpers.showToast("${right.message}");
+            updatepurchasereportdataLoaderState(LoaderState.error);
+          }
           notifyListeners();
         },
       ).catchError((error) {

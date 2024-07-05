@@ -322,6 +322,7 @@ class FinalSlider extends StatelessWidget {
                                   ));
                                   final home = context.read<HomeProvider>();
                                   await home.getcategory();
+                                  home.getcompany();
                                   home.getpaymentsub();
                                   home.getpaymentmode();
                                   await home.getbranch();
@@ -330,13 +331,21 @@ class FinalSlider extends StatelessWidget {
                                   await home.getmonthwisegraphs(
                                       branchid:
                                           home.branchdata?.data![0].branchId);
+                                  await home.gettransaction(
+                                      startdate:
+                                          "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}",
+                                      endate:
+                                          "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}",
+                                      branchid:
+                                          home.branchdata?.data![0].branchId);
+
                                   await home.getproduct(
                                       count: 5,
                                       categoryid: home
                                           .categorydata?.data![0].categoryID);
                                 } else {
-                                  Helpers.showToast(
-                                      "${homeprovider.logindata?.message}");
+                                  // Helpers.showToast(
+                                  //     "${homeprovider.logindata?.message}");
                                 }
                               } else {
                                 Helpers.showToast("Field is empty");

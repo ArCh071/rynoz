@@ -628,85 +628,147 @@ class _MisReportState extends State<MisReport> {
               10.verticalSpace,
               len == 0
                   ? const SizedBox()
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 440.h,
-                            child: ListView.separated(
-                                scrollDirection: Axis.vertical,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) {
-                                  DateTime dateTime = DateTime.parse(
-                                      "${value.misreportdata?.data![index].invoiceDateTime}");
+                  :
+                  // SingleChildScrollView(
+                  //     child: Column(
+                  //       children: [
+                  //         SizedBox(
+                  //           height: 440.h,
+                  //           child: ListView.separated(
+                  //               scrollDirection: Axis.vertical,
+                  //               physics: const AlwaysScrollableScrollPhysics(),
+                  //               shrinkWrap: true,
+                  //               itemBuilder: (context, index) {
+                  //                 DateTime dateTime = DateTime.parse(
+                  //                     "${value.misreportdata?.data![index].invoiceDateTime}");
 
-                                  // Convert to Indian Standard Time (IST)
-                                  tz.Location ist =
-                                      tz.getLocation('Asia/Kolkata');
-                                  tz.TZDateTime istDateTime =
-                                      tz.TZDateTime.from(dateTime, ist);
+                  //                 // Convert to Indian Standard Time (IST)
+                  //                 tz.Location ist =
+                  //                     tz.getLocation('Asia/Kolkata');
+                  //                 tz.TZDateTime istDateTime =
+                  //                     tz.TZDateTime.from(dateTime, ist);
 
-                                  // Format the date/time in IST
-                                  String formattedDateTime =
-                                      DateFormat('dd-MM-yyyy HH:mm:ss a')
-                                          .format(istDateTime);
+                  //                 // Format the date/time in IST
+                  //                 String formattedDateTime =
+                  //                     DateFormat('dd-MM-yyyy HH:mm:ss a')
+                  //                         .format(istDateTime);
 
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        boxShadow: [
-                                          BoxShadow(
-                                              blurRadius: 10.r,
-                                              color: const Color.fromARGB(
-                                                  255, 217, 215, 215))
-                                        ],
-                                        borderRadius:
-                                            BorderRadius.circular(7.r),
-                                        border: Border.all(color: Colors.grey)),
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Inv No: ${value.misreportdata?.data![index].invoiceNo}",
-                                              style: FontPalette.black11500,
-                                            ),
-                                            Text(
-                                              "Inv Date: $formattedDateTime",
-                                              style: FontPalette.black11300,
-                                            )
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Gross Amt: Rs ${value.misreportdata?.data![index].totalGrossAmount}",
-                                              style: FontPalette.black13500,
-                                            ),
-                                            Text(
-                                              "Mode: ${value.misreportdata?.data![index].paymentModeName}",
-                                              style: FontPalette.black13500,
-                                            )
-                                          ],
-                                        )
+                  //                 return Container(
+                  //                   decoration: BoxDecoration(
+                  //                       color: Colors.white,
+                  //                       boxShadow: [
+                  //                         BoxShadow(
+                  //                             blurRadius: 10.r,
+                  //                             color: const Color.fromARGB(
+                  //                                 255, 217, 215, 215))
+                  //                       ],
+                  //                       borderRadius:
+                  //                           BorderRadius.circular(7.r),
+                  //                       border: Border.all(color: Colors.grey)),
+                  //                   child: Column(
+                  //                     children: [
+                  //                       Row(
+                  //                         mainAxisAlignment:
+                  //                             MainAxisAlignment.spaceBetween,
+                  //                         children: [
+                  //                           Text(
+                  //                             "Inv No: ${value.misreportdata?.data![index].invoiceNo}",
+                  //                             style: FontPalette.black11500,
+                  //                           ),
+                  //                           Text(
+                  //                             "Inv Date: $formattedDateTime",
+                  //                             style: FontPalette.black11300,
+                  //                           )
+                  //                         ],
+                  //                       ),
+                  //                       Row(
+                  //                         mainAxisAlignment:
+                  //                             MainAxisAlignment.spaceBetween,
+                  //                         children: [
+                  //                           Text(
+                  //                             "Gross Amt: Rs ${value.misreportdata?.data![index].totalGrossAmount}",
+                  //                             style: FontPalette.black13500,
+                  //                           ),
+                  //                           Text(
+                  //                             "Mode: ${value.misreportdata?.data![index].paymentModeName}",
+                  //                             style: FontPalette.black13500,
+                  //                           )
+                  //                         ],
+                  //                       )
+                  //                     ],
+                  //                   )
+                  //                       .verticalPadding(7.h)
+                  //                       .horizontalPadding(8.w),
+                  //                 ).horizontalPadding(20.w);
+                  //               },
+                  //               separatorBuilder: (context, index) =>
+                  //                   10.verticalSpace,
+                  //               itemCount: value.misreportdata!.data!.length),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  value.misreportdata!.data != null
+                      ? SizedBox(
+                          height: 430.h,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(7.r),
+                                  color:
+                                      const Color.fromARGB(255, 238, 236, 236),
+                                ),
+                                child: DataTable(
+                                  columns: const <DataColumn>[
+                                    DataColumn(
+                                      label: Text('Inv No'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Inv Date'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('GrossAmt'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Mode'),
+                                    ),
+                                  ],
+                                  rows:
+                                      value.misreportdata!.data!.map((invoice) {
+                                    DateTime dateTime = DateTime.parse(
+                                        "${invoice.invoiceDateTime}");
+
+                                    // Convert to Indian Standard Time (IST)
+                                    tz.Location ist =
+                                        tz.getLocation('Asia/Kolkata');
+                                    tz.TZDateTime istDateTime =
+                                        tz.TZDateTime.from(dateTime, ist);
+
+                                    // Format the date/time in IST
+                                    String formattedDateTime =
+                                        DateFormat('dd-MM-yyyy HH:mm:ss a')
+                                            .format(istDateTime);
+
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(Text("${invoice.invoiceNo}")),
+                                        DataCell(Text(formattedDateTime)),
+                                        DataCell(Text(invoice.totalGrossAmount
+                                            .toString())),
+                                        DataCell(Text(invoice.paymentModeName
+                                            .toString())),
                                       ],
-                                    )
-                                        .verticalPadding(7.h)
-                                        .horizontalPadding(8.w),
-                                  ).horizontalPadding(20.w);
-                                },
-                                separatorBuilder: (context, index) =>
-                                    10.verticalSpace,
-                                itemCount: value.misreportdata!.data!.length),
+                                    );
+                                  }).toList(),
+                                ),
+                              ).horizontalPadding(20.w),
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                      : const SizedBox(),
               len == 0
                   ? const SizedBox()
                   : CustomContainer(

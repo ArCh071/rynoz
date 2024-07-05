@@ -1,4 +1,5 @@
 import 'package:either_dart/either.dart';
+import 'package:rynoz/datamodel/companydatamodel.dart';
 import 'package:rynoz/datamodel/expirystock_datamodel.dart';
 import 'package:rynoz/datamodel/getbranch_datamodel.dart';
 import 'package:rynoz/datamodel/getcategory_datamodel.dart';
@@ -12,6 +13,7 @@ import 'package:rynoz/datamodel/monthwise_datamodel.dart';
 import 'package:rynoz/datamodel/paymentmode_datamodel.dart';
 import 'package:rynoz/datamodel/paymentsub_datamodel.dart';
 import 'package:rynoz/datamodel/salesreport_datamodel.dart';
+import 'package:rynoz/datamodel/stockreport_datamodel.dart';
 import 'package:rynoz/datamodel/transactiondatamodel.dart';
 import 'package:rynoz/repositories/network/response_error.dart';
 
@@ -28,7 +30,7 @@ abstract class BaseServices {
       {String? startdate, String? enddate});
   Future<Either<ResponseError, GetPurchasereportdatamodel>>
       purchasereportwithdate({String? startdate, String? enddate, int? modeid});
-  Future<Either<ResponseError, dynamic>> stockreport(
+  Future<Either<ResponseError, StockreportDatamodel>> stockreport(
       {String? barcode, String? productname, int? baseon, int? type});
   Future<Either<ResponseError, GetVATreportDatamodel>> vatreport({
     String? startdate,
@@ -40,6 +42,7 @@ abstract class BaseServices {
       {int? count, int? categoryid});
   Future<Either<ResponseError, TransactionDatamodel>> gettransaction(
       {String? startdate, String? enddate, int? branchid});
+  Future<Either<ResponseError, CompanyDatamodel>> getcompany();
 
   Future<Either<ResponseError, MonthwisegraphDatamodel>> getmonthwisegraph(
       {int? branchid});

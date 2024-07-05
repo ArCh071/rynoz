@@ -1,4 +1,5 @@
 import 'package:either_dart/either.dart';
+import 'package:rynoz/datamodel/companydatamodel.dart';
 import 'package:rynoz/datamodel/expirystock_datamodel.dart';
 import 'package:rynoz/datamodel/getbranch_datamodel.dart';
 import 'package:rynoz/datamodel/getcategory_datamodel.dart';
@@ -11,6 +12,7 @@ import 'package:rynoz/datamodel/monthwise_datamodel.dart';
 import 'package:rynoz/datamodel/paymentmode_datamodel.dart';
 import 'package:rynoz/datamodel/paymentsub_datamodel.dart';
 import 'package:rynoz/datamodel/salesreport_datamodel.dart';
+import 'package:rynoz/datamodel/stockreport_datamodel.dart';
 import 'package:rynoz/datamodel/transactiondatamodel.dart';
 import 'package:rynoz/repositories/network/api_request.dart';
 import 'package:rynoz/repositories/network/base_service.dart';
@@ -86,7 +88,7 @@ class Services implements BaseServices {
           {String? startdate, String? enddate, int? modeid}) {
     return safe(getRequest(
             endPoint:
-                "PurchaseReport/$startdate,$enddate,$modeid")) //date format 2024-04-01,2024-03-05
+                "PurchaseReport/Payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=$modeid")) //date format 2024-04-01,2024-03-05
         .thenRight(checkHttpStatus)
         .thenRight(parseJson)
         .mapRight((right) {
@@ -144,7 +146,8 @@ class Services implements BaseServices {
   Future<Either<ResponseError, SalesreportDatamodel>> salesreport(
       {String? startdate, String? enddate, int? modeid, int? subid}) {
     return safe(getRequest(
-            endPoint: "SalesReport/$startdate,$enddate,$modeid,$subid"))
+            endPoint:
+                "SalesReport/payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=${modeid ?? ''}&PaymentSub_Id=${subid ?? ''}"))
         // date format 2024-04-01,2024-03-05
 
         .thenRight(checkHttpStatus)
@@ -155,14 +158,15 @@ class Services implements BaseServices {
   }
 
   @override
-  Future<Either<ResponseError, dynamic>> stockreport(
+  Future<Either<ResponseError, StockreportDatamodel>> stockreport(
       {String? barcode, String? productname, int? baseon, int? type}) {
     return safe(getRequest(
-            endPoint: "StockReport/$barcode,$productname,$baseon,$type"))
+            endPoint:
+                "StockReport/Stock?Barcode=$barcode&Product_name=$productname&BaseOn=${baseon == null ? '' : baseon}&Type=${type == null ? '' : type}"))
         .thenRight(checkHttpStatus)
         .thenRight(parseJson)
         .mapRight((right) {
-      return right;
+      return StockreportDatamodel.fromJson(right);
     });
   }
 
@@ -197,6 +201,16 @@ class Services implements BaseServices {
         .thenRight(parseJson)
         .mapRight((right) {
       return TransactionDatamodel.fromJson(right);
+    });
+  }
+
+  @override
+  Future<Either<ResponseError, CompanyDatamodel>> getcompany() {
+    return safe(getRequest(endPoint: "company"))
+        .thenRight(checkHttpStatus)
+        .thenRight(parseJson)
+        .mapRight((right) {
+      return CompanyDatamodel.fromJson(right);
     });
   }
 }

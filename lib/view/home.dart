@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animation_progress_bar/flutter_animation_progress_bar.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
 import 'package:rynoz/helper/color_palette.dart';
@@ -65,13 +66,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   List<num> data = [10, 20, 30, 10, 20, 10, 50];
+  DateTime? selectedDateend = DateTime.now();
 
+  DateTime? selectedDatestart = DateTime.now();
   late TabController _tabController;
   int? selected = 0;
   @override
   void initState() {
     super.initState();
     final home = context.read<HomeProvider>();
+    home.transendate = DateFormat('dd MMMyy').format(selectedDateend!);
+    home.transstartdate = DateFormat('dd MMMyy').format(selectedDateend!);
 
     _tabController = TabController(
         length: home.categorydata?.data?.length ?? 0, vsync: this);
@@ -101,37 +106,37 @@ class _HomeScreenState extends State<HomeScreen>
   ];
   List<Map<String, dynamic>> griddata = [
     {
-      "image": "assets/1.png",
+      "image": "assets/sales.png",
       "amount": "10,000",
       "type": "Sale",
       "typeamount": "500"
     },
     {
-      "image": "assets/2.png",
+      "image": "assets/Purchase.png",
       "amount": "10,000",
       "type": "Purchase",
       "typeamount": "500"
     },
     {
-      "image": "assets/3.png",
+      "image": "assets/Sales Return.png",
       "amount": "10,000",
       "type": "S.Return",
       "typeamount": "500"
     },
     {
-      "image": "assets/4.png",
+      "image": "assets/Purchase Return.png",
       "amount": "10,000",
       "type": "P.Return",
       "typeamount": "500"
     },
     {
-      "image": "assets/5.png",
+      "image": "assets/Product.png",
       "amount": "10,000",
       "type": "Product",
       "typeamount": "500"
     },
     {
-      "image": "assets/6.png",
+      "image": "assets/bank.png",
       "amount": "10,000",
       "type": "Expense",
       "typeamount": "500"
@@ -148,6 +153,12 @@ class _HomeScreenState extends State<HomeScreen>
     await home.getmonthwisegraphs(branchid: home.branchdata?.data![0].branchId);
     await home.getproduct(
         count: 5, categoryid: home.categorydata?.data![0].categoryID);
+    await home.gettransaction(
+        startdate:
+            "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}",
+        endate:
+            "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}",
+        branchid: home.branchdata?.data![0].branchId);
   }
 
   DateTime setDate = DateTime.now();
@@ -178,6 +189,12 @@ class _HomeScreenState extends State<HomeScreen>
             )));
   }
 
+  int? salesindex;
+  int? purchseindex;
+  int? sreturnindex;
+  int? preturnindex;
+  int? productindex;
+  int? expenseindex;
   int? len;
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   @override
@@ -234,17 +251,21 @@ class _HomeScreenState extends State<HomeScreen>
                     Column(
                       children: [
                         InkWell(
-                          onTap: () =>
-                              Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => const SalesReport(),
-                          )),
+                          onTap: () {
+                            home.selectedmode = null;
+                            home.selectedsub = null;
+                            home.salesreportdata = null;
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => const SalesReport(),
+                            ));
+                          },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
                                 children: [
                                   Image.asset(
-                                    "assets/purchase.png",
+                                    "assets/purchas.png",
                                     color: Colors.black,
                                   ),
                                   10.horizontalSpace,
@@ -268,10 +289,13 @@ class _HomeScreenState extends State<HomeScreen>
                         ).leftPadding(40.w),
                         15.verticalSpace,
                         InkWell(
-                          onTap: () =>
-                              Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => const PurchaseReport(),
-                          )),
+                          onTap: () {
+                            home.purselectedmode = null;
+                            home.purchasereportdata = null;
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => const PurchaseReport(),
+                            ));
+                          },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -299,10 +323,14 @@ class _HomeScreenState extends State<HomeScreen>
                         ).leftPadding(40.w),
                         15.verticalSpace,
                         InkWell(
-                          onTap: () =>
-                              Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => const StockReport(),
-                          )),
+                          onTap: () {
+                            home.stockreportdata = null;
+                            home.baseonselected = null;
+                            value.stockselected = null;
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => const StockReport(),
+                            ));
+                          },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -429,6 +457,20 @@ class _HomeScreenState extends State<HomeScreen>
           physics: const AlwaysScrollableScrollPhysics(),
           child: SafeArea(
               child: Consumer<HomeProvider>(builder: (context, value, child) {
+            if (value.gettransactiondata?.data != null) {
+              salesindex = value.gettransactiondata!.data!
+                  .indexWhere((element) => element.typeName == 'Sales');
+              purchseindex = value.gettransactiondata!.data!
+                  .indexWhere((element) => element.typeName == 'Purchase');
+              expenseindex = value.gettransactiondata!.data!
+                  .indexWhere((element) => element.typeName == 'Bank');
+              preturnindex = value.gettransactiondata!.data!.indexWhere(
+                  (element) => element.typeName == 'Purchase Return');
+              sreturnindex = value.gettransactiondata!.data!
+                  .indexWhere((element) => element.typeName == 'Sales Return');
+              productindex = value.gettransactiondata!.data!
+                  .indexWhere((element) => element.typeName == 'Product');
+            }
             return Column(
               children: [
                 CustomContainer(
@@ -447,100 +489,117 @@ class _HomeScreenState extends State<HomeScreen>
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "Shope Name",
-                                    style: FontPalette.black13500,
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return StatefulBuilder(builder:
-                                              (BuildContext context, setState) {
-                                            return SingleChildScrollView(
-                                                child: SizedBox(
-                                                        child: Column(
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      "Select Shope",
-                                                      style: FontPalette
-                                                          .black16700,
-                                                    ),
-                                                    InkWell(
-                                                        onTap: () =>
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop(),
-                                                        child: const Icon(
-                                                          Icons.close,
-                                                          size: 35,
-                                                          color: Colors.grey,
-                                                        ))
-                                                  ],
-                                                ),
-                                                18.verticalSpace,
-                                                ListView.builder(
-                                                    shrinkWrap: true,
-                                                    itemCount: value.branchdata
-                                                            ?.data?.length ??
-                                                        0,
-                                                    itemBuilder:
-                                                        (context, index) {
-                                                      return Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          Text(
-                                                            "${value.branchdata?.data![index].branchName}",
-                                                            style: FontPalette
-                                                                .black14500,
-                                                          ),
-                                                          Radio(
-                                                              activeColor:
-                                                                  HexColor(
-                                                                      "#37C423"),
-                                                              value: index,
-                                                              groupValue:
-                                                                  selected,
-                                                              onChanged: (val) {
-                                                                selected = val;
-                                                                setState(
-                                                                  () {},
-                                                                );
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop(false);
-                                                              })
-                                                        ],
-                                                      );
-                                                    }),
-                                              ],
-                                            ))
-                                                    .verticalPadding(20.h)
-                                                    .horizontalPadding(20.w));
-                                          });
-                                        },
-                                      );
-                                    },
-                                    child: Icon(
-                                      Icons.keyboard_arrow_down_outlined,
-                                      color: HexColor("#37C423"),
+                              SizedBox(
+                                width: 220.w,
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        "${value.company?.data![0].companyName}",
+                                        style: FontPalette.black13500,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                      ),
                                     ),
-                                  )
-                                ],
+                                    InkWell(
+                                      onTap: () {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return StatefulBuilder(builder:
+                                                (BuildContext context,
+                                                    setState) {
+                                              return SingleChildScrollView(
+                                                  child: SizedBox(
+                                                          child: Column(
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        "Select Shope",
+                                                        style: FontPalette
+                                                            .black16700,
+                                                      ),
+                                                      InkWell(
+                                                          onTap: () =>
+                                                              Navigator.of(
+                                                                      context)
+                                                                  .pop(),
+                                                          child: const Icon(
+                                                            Icons.close,
+                                                            size: 35,
+                                                            color: Colors.grey,
+                                                          ))
+                                                    ],
+                                                  ),
+                                                  18.verticalSpace,
+                                                  ListView.builder(
+                                                      shrinkWrap: true,
+                                                      itemCount: value
+                                                              .branchdata
+                                                              ?.data
+                                                              ?.length ??
+                                                          0,
+                                                      itemBuilder:
+                                                          (context, index) {
+                                                        return Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              "${value.branchdata?.data![index].branchName}",
+                                                              style: FontPalette
+                                                                  .black14500,
+                                                            ),
+                                                            Radio(
+                                                                activeColor:
+                                                                    HexColor(
+                                                                        "#37C423"),
+                                                                value: index,
+                                                                groupValue:
+                                                                    selected,
+                                                                onChanged:
+                                                                    (val) {
+                                                                  selected =
+                                                                      val;
+                                                                  setState(
+                                                                    () {},
+                                                                  );
+                                                                  Navigator.of(
+                                                                          context)
+                                                                      .pop(
+                                                                          false);
+                                                                })
+                                                          ],
+                                                        );
+                                                      }),
+                                                ],
+                                              ))
+                                                      .verticalPadding(20.h)
+                                                      .horizontalPadding(20.w));
+                                            });
+                                          },
+                                        );
+                                      },
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down_outlined,
+                                        color: HexColor("#37C423"),
+                                      ),
+                                    )
+                                  ],
+                                ),
                               ),
-                              Text(
-                                "${value.branchdata?.data![0].branchName}",
-                                style: FontPalette.grey12500,
+                              SizedBox(
+                                width: 230.w,
+                                child: Text(
+                                  "${value.branchdata?.data![0].branchName}",
+                                  style: FontPalette.black11500,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               )
                             ],
                           )
@@ -571,118 +630,556 @@ class _HomeScreenState extends State<HomeScreen>
                 10.verticalSpace,
                 Column(
                   children: [
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: CustomContainer(
+                    //         bordercolor: "2388C4",
+                    //         borderradius: 8.r,
+                    //         height: 31.h,
+                    //         boxshadow: [
+                    //           BoxShadow(
+                    //               color: HexColor("#000000"),
+                    //               blurRadius: 1.r,
+                    //               offset: const Offset(0, 0.4))
+                    //         ],
+                    //         child: Center(
+                    //             child: Text(
+                    //           "Today",
+                    //           style: FontPalette.blue13600,
+                    //         )),
+                    //       ),
+                    //     ),
+                    //     7.horizontalSpace,
+                    //     Expanded(
+                    //       child: CustomContainer(
+                    //         borderradius: 8.r,
+                    //         height: 31.h,
+                    //         child: Center(
+                    //             child: Text(
+                    //           "Yesterday",
+                    //           style: FontPalette.black11500,
+                    //         )),
+                    //       ),
+                    //     ),
+                    //     7.horizontalSpace,
+                    //     Expanded(
+                    //       child: InkWell(
+                    //         onTap: () async {
+                    //           await showDatePicker(
+                    //               cancelText: '',
+                    //               confirmText: '',
+                    //               context: context,
+                    //               initialDate: DateTime.now(),
+                    //               firstDate: DateTime(2015, 8),
+                    //               lastDate: DateTime(2101));
+                    //         },
+                    //         child: CustomContainer(
+                    //           borderradius: 8.r,
+                    //           height: 31.h,
+                    //           child: Row(
+                    //             mainAxisAlignment: MainAxisAlignment.center,
+                    //             children: [
+                    //               Text(
+                    //                 "Date",
+                    //                 style: FontPalette.black11500,
+                    //               ),
+                    //               Icon(
+                    //                 Icons.keyboard_arrow_down_outlined,
+                    //                 color: HexColor("#2388C4"),
+                    //               )
+                    //             ],
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     Row(
                       children: [
                         Expanded(
-                          child: CustomContainer(
-                            bordercolor: "2388C4",
-                            borderradius: 8.r,
-                            height: 31.h,
-                            boxshadow: [
-                              BoxShadow(
-                                  color: HexColor("#000000"),
-                                  blurRadius: 1.r,
-                                  offset: const Offset(0, 0.4))
-                            ],
-                            child: Center(
-                                child: Text(
-                              "Today",
-                              style: FontPalette.blue13600,
-                            )),
-                          ),
-                        ),
-                        7.horizontalSpace,
-                        Expanded(
-                          child: CustomContainer(
-                            borderradius: 8.r,
-                            height: 31.h,
-                            child: Center(
-                                child: Text(
-                              "Yesterday",
-                              style: FontPalette.black11500,
-                            )),
-                          ),
-                        ),
-                        7.horizontalSpace,
-                        Expanded(
                           child: InkWell(
                             onTap: () async {
-                              await showDatePicker(
-                                  cancelText: '',
-                                  confirmText: '',
+                              selectedDatestart = await showDatePicker(
+                                  cancelText: 'Cancel',
+                                  confirmText: 'Ok',
                                   context: context,
-                                  initialDate: DateTime.now(),
+                                  initialDate: selectedDatestart,
                                   firstDate: DateTime(2015, 8),
                                   lastDate: DateTime(2101));
+                              if (selectedDatestart != null) {
+                                value.gettransstartdate(selectedDatestart!);
+                                await value.gettransaction(
+                                  branchid: home.branchdata?.data![0].branchId,
+                                  startdate:
+                                      "${selectedDatestart?.year}-${selectedDatestart?.month}-${selectedDatestart?.day}",
+                                  endate:
+                                      "${selectedDateend?.year}-${selectedDateend?.month}-${selectedDateend?.day}",
+                                );
+                              } else {
+                                // User canceled the operation
+                              }
                             },
                             child: CustomContainer(
-                              borderradius: 8.r,
-                              height: 31.h,
+                              bordercolor: "2388C4",
+                              boxshadow: [
+                                BoxShadow(
+                                    color: HexColor("#000000"),
+                                    blurRadius: 1.r,
+                                    offset: Offset(0, .1.w))
+                              ],
+                              boxcolor: "FCFFFC",
+                              borderradius: 4.r,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    "Date",
-                                    style: FontPalette.black11500,
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "From",
+                                        style: FontPalette.black11500,
+                                        maxLines: 2,
+                                      ),
+                                      Text(
+                                        "${value.transstartdate}",
+                                        style: FontPalette.black15500,
+                                      )
+                                    ],
                                   ),
                                   Icon(
-                                    Icons.keyboard_arrow_down_outlined,
+                                    Icons.keyboard_arrow_right_outlined,
                                     color: HexColor("#2388C4"),
                                   )
                                 ],
-                              ),
+                              ).verticalPadding(5.h).leftPadding(10.w),
+                            ),
+                          ),
+                        ),
+                        5.horizontalSpace,
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              selectedDateend = await showDatePicker(
+                                  cancelText: 'Cancel',
+                                  confirmText: 'Ok',
+                                  context: context,
+                                  initialDate: selectedDateend,
+                                  firstDate: DateTime(2015, 8),
+                                  lastDate: DateTime(2101));
+                              if (selectedDateend != null) {
+                                // Do something with the selected date
+                                value.gettransenddate(selectedDateend!);
+                                await value.gettransaction(
+                                  branchid: home.branchdata?.data![0].branchId,
+                                  startdate:
+                                      "${selectedDatestart?.year}-${selectedDatestart?.month}-${selectedDatestart?.day}",
+                                  endate:
+                                      "${selectedDateend?.year}-${selectedDateend?.month}-${selectedDateend?.day}",
+                                );
+                              } else {
+                                // User canceled the operation
+                              }
+                            },
+                            child: CustomContainer(
+                              bordercolor: "2388C4",
+                              boxshadow: [
+                                BoxShadow(
+                                    color: HexColor("#000000"),
+                                    blurRadius: 1.r,
+                                    offset: Offset(0, .1.w))
+                              ],
+                              boxcolor: "FCFFFC",
+                              borderradius: 4.r,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "To",
+                                        style: FontPalette.black11500,
+                                        maxLines: 2,
+                                      ),
+                                      Text(
+                                        "${value.transendate}",
+                                        style: FontPalette.black15500,
+                                      )
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.keyboard_arrow_right_outlined,
+                                    color: HexColor("#2388C4"),
+                                  )
+                                ],
+                              ).verticalPadding(5.h).leftPadding(10.w),
                             ),
                           ),
                         ),
                       ],
                     ),
                     10.verticalSpace,
-                    GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
+                    value.purchasereportdataLoaderState == LoaderState.loading
+                        ? GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: 4,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2, // 2 items in each row
+                              mainAxisSpacing: 8.0, // spacing between rows
+                              crossAxisSpacing: 8.0, // spacing between columns
+                              childAspectRatio: 1.5.h,
+                            ),
+                            itemBuilder: (BuildContext context, int index) {
+                              return const CustomContainer(
+                                boxcolor: "A9A9A9",
+                              ).addShimmer();
+                            })
+                        : GridView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            // itemCount:
+                            //     value.gettransactiondata?.data?.length ?? 0,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2, // 2 items in each row
+                              mainAxisSpacing: 8.0, // spacing between rows
+                              crossAxisSpacing: 8.0, // spacing between columns
+                              childAspectRatio: 1.5.h,
+                            ),
 
-                      shrinkWrap: true,
-                      itemCount: griddata
-                          .length, // 2 boxes horizontally and 4 boxes vertically will make 8 items
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, // 2 items in each row
-                        mainAxisSpacing: 8.0, // spacing between rows
-                        crossAxisSpacing: 8.0, // spacing between columns
-                        childAspectRatio: 1.5.h,
-                      ),
-                      itemBuilder: (BuildContext context, int index) {
-                        return CustomContainer(
-                          boxcolor: "FFFFFFFF",
-                          borderradius: 4.r,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            // itemBuilder: (BuildContext context, int index) {
+                            //   return CustomContainer(
+                            //     boxcolor: "FFFFFFFF",
+                            //     borderradius: 4.r,
+                            //     child: Row(
+                            //       mainAxisAlignment:
+                            //           MainAxisAlignment.spaceAround,
+                            //       children: [
+                            //         Image.asset(
+                            //             "assets/${value.gettransactiondata?.data?[index].typeName}.png"),
+                            //         Column(
+                            //           mainAxisAlignment:
+                            //               MainAxisAlignment.center,
+                            //           crossAxisAlignment:
+                            //               CrossAxisAlignment.start,
+                            //           children: [
+                            //             Text(
+                            //               "₹${value.gettransactiondata?.data?[index].grandTotal?.toStringAsFixed(2)}",
+                            //               style: FontPalette.black14500,
+                            //             ),
+                            //             Row(
+                            //               children: [
+                            //                 Text(
+                            //                   value
+                            //                               .gettransactiondata
+                            //                               ?.data?[index]
+                            //                               .typeName ==
+                            //                           "Purchase Return"
+                            //                       ? "P.Return"
+                            //                       : value
+                            //                                   .gettransactiondata
+                            //                                   ?.data?[index]
+                            //                                   .typeName ==
+                            //                               "Sales Return"
+                            //                           ? "S.Return"
+                            //                           : "${value.gettransactiondata?.data?[index].typeName}",
+                            //                   style: FontPalette.blue11500,
+                            //                 ),
+                            //                 5.horizontalSpace,
+                            //                 Text(
+                            //                     "${value.gettransactiondata?.data?[index].transactionCount}",
+                            //                     style:
+                            //                         FontPalette.black11500),
+                            //               ],
+                            //             )
+                            //           ],
+                            //         )
+                            //       ],
+                            //     ).horizontalPadding(8.w),
+                            //   );
+                            // },
                             children: [
-                              Image.asset(griddata[index]["image"]),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "₹${griddata[index]["amount"]}",
-                                    style: FontPalette.black14500,
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        griddata[index]["type"],
-                                        style: FontPalette.blue11500,
-                                      ),
-                                      5.horizontalSpace,
-                                      Text(griddata[index]["typeamount"],
-                                          style: FontPalette.black11500),
-                                    ],
-                                  )
-                                ],
-                              )
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        child: Image.asset("assets/Sales.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        OverflowText(
+                                          text: salesindex == null ||
+                                                  salesindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[salesindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "Sales",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                salesindex == null ||
+                                                        salesindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[salesindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        width: 40.w,
+                                        child:
+                                            Image.asset("assets/purchas.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        OverflowText(
+                                          text: purchseindex == null ||
+                                                  purchseindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[purchseindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "Purchase",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                purchseindex == null ||
+                                                        purchseindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[purchseindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        width: 40.w,
+                                        child: Image.asset(
+                                            "assets/Sales Return.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        OverflowText(
+                                          text: sreturnindex == null ||
+                                                  sreturnindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[sreturnindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "S.Return",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                sreturnindex == null ||
+                                                        sreturnindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[sreturnindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        width: 40.w,
+                                        child: Image.asset(
+                                            "assets/Purchase Return.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        OverflowText(
+                                          text: preturnindex == null ||
+                                                  productindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[productindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "P.Return",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                preturnindex == null ||
+                                                        preturnindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[preturnindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        width: 40.w,
+                                        child:
+                                            Image.asset("assets/Product.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Text(
+                                        //   preturnindex == null ||
+                                        //           productindex! < 0
+                                        //       ? '₹ 0'
+                                        //       : "₹ ${value.gettransactiondata?.data?[productindex!].grandTotal?.toStringAsFixed(2)}",
+                                        //   style: FontPalette.black14500,
+                                        //   softWrap: true,
+                                        //   overflow: TextOverflow.ellipsis,
+                                        //   maxLines: 2,
+                                        // ),
+                                        OverflowText(
+                                          text: preturnindex == null ||
+                                                  productindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[productindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "Product",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                productindex == null ||
+                                                        productindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[productindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
+                              CustomContainer(
+                                boxcolor: "FFFFFFFF",
+                                borderradius: 4.r,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                        width: 40.w,
+                                        child: Image.asset("assets/Bank.png")),
+                                    10.horizontalSpace,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        OverflowText(
+                                          text: expenseindex == null ||
+                                                  expenseindex! < 0
+                                              ? '₹ 0'
+                                              : "₹ ${value.gettransactiondata?.data?[expenseindex!].grandTotal?.toStringAsFixed(2) ?? ''}",
+                                          overflowIndex:
+                                              11, // Specify the index after which overflow occurs
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "Expense",
+                                              style: FontPalette.blue11500,
+                                            ),
+                                            5.horizontalSpace,
+                                            Text(
+                                                expenseindex == null ||
+                                                        expenseindex! < 0
+                                                    ? '0'
+                                                    : "${value.gettransactiondata?.data?[expenseindex!].transactionCount}",
+                                                style: FontPalette.black10500),
+                                          ],
+                                        )
+                                      ],
+                                    )
+                                  ],
+                                ).horizontalPadding(8.w),
+                              ),
                             ],
-                          ).horizontalPadding(10.w),
-                        );
-                      },
-                    ),
+                          ),
                     10.verticalSpace,
                     Row(
                       children: [
@@ -709,6 +1206,7 @@ class _HomeScreenState extends State<HomeScreen>
                         itemCount: value.getmonthwisegraph?.data?.length,
                         itemBuilder: (BuildContext context, int index) {
                           return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: FAProgressBar(
@@ -716,7 +1214,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   maxValue: 10000000,
                                   currentValue: double.parse(
                                       "${value.getmonthwisegraph?.data![index].grandTotal ?? 0}"),
-                                  size: 30.w,
+                                  size: 20.w,
 
                                   animatedDuration:
                                       const Duration(milliseconds: 400),
@@ -730,17 +1228,28 @@ class _HomeScreenState extends State<HomeScreen>
                                   progressColor: Colors.green,
 
                                   // displayText: '°C',
-                                ).rightPadding(10.w),
+                                ).rightPadding(6.w),
                               ),
                               SizedBox(
-                                width: 30.w,
-                                child: Text(
-                                    "${value.getmonthwisegraph?.data![index].month ?? ''}"),
+                                width: 20.w,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      value.getmonthwisegraph?.data![index]
+                                              .month ??
+                                          '',
+                                      style: TextStyle(
+                                          fontSize: 8.5.sp,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
                               )
                             ],
                           );
                         },
-                      ).horizontalPadding(10.w).verticalPadding(5.h),
+                      ).horizontalPadding(8.w).verticalPadding(5.h),
                     ),
                     10.verticalSpace,
                     Row(
@@ -798,7 +1307,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 10.horizontalSpace,
                                 Expanded(
                                     child: Text(
-                                  "Expiry Stock Alert",
+                                  "Expiry   Stock Alert",
                                   style: FontPalette.black13500,
                                 )),
                                 Icon(
@@ -966,7 +1475,7 @@ class _HomeScreenState extends State<HomeScreen>
                                                                       Row(
                                                                         children: [
                                                                           Image.asset(
-                                                                              "assets/product.png"),
+                                                                              "assets/pro.png"),
                                                                           15.horizontalSpace,
                                                                           SizedBox(
                                                                             width:
@@ -1313,4 +1822,39 @@ class ChartSampleData {
 
   final String year;
   final num sales;
+}
+
+class OverflowText extends StatelessWidget {
+  final String text;
+  final int overflowIndex;
+
+  OverflowText({required this.text, required this.overflowIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.length <= overflowIndex) {
+      return Text(
+        text,
+        style: FontPalette.black14500,
+      );
+    }
+
+    String firstPart = text.substring(0, overflowIndex);
+    String secondPart = text.substring(overflowIndex);
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: firstPart,
+            style: FontPalette.black14500,
+          ),
+          TextSpan(
+            text: '\n$secondPart',
+            style: FontPalette.black14500,
+          ),
+        ],
+      ),
+    );
+  }
 }

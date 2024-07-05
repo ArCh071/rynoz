@@ -69,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(AppConfig.name ?? ''),
-                          Text("Emp.ID ${AppConfig.id ?? ''}")
+                          // Text("Emp.ID ${AppConfig.id ?? ''}")
                         ],
                       )
                     ],
@@ -104,7 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: FontPalette.black15500,
                           ),
                           Text(
-                            "Company Name",
+                            "${values.company?.data![0].companyName}",
                             style: FontPalette.grey12500,
                           )
                         ],
@@ -130,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: FontPalette.black15500,
                             ),
                             Text(
-                              "${AppConfig.address ?? ''}, ${AppConfig.state ?? ''},${AppConfig.pin ?? ''}",
+                              "${values.company?.data![0].address}",
                               style: FontPalette.grey12500,
                               maxLines: 2, // Limit to a single line
                               overflow: TextOverflow
@@ -159,11 +159,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: FontPalette.black15500,
                           ),
                           Text(
-                            "PH: ${AppConfig.phone ?? ''}",
+                            "PH:  ${values.company?.data![0].mobile ?? ''}",
                             style: FontPalette.grey12500,
                           ),
                           Text(
-                            "Email: ${AppConfig.email ?? ''}",
+                            "Email: ${values.company?.data![0].email ?? ''}",
                             style: FontPalette.grey12500,
                           )
                         ],
@@ -179,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   InkWell(
                     onTap: () {
                       final sharedPrefs = GetIt.instance<SharedPrefs>();
-                      sharedPrefs.clearToken();
+                      sharedPrefs.clearall();
 
                       Navigator.pushAndRemoveUntil<dynamic>(
                         context,

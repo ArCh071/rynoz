@@ -72,13 +72,13 @@ class _SalesReportState extends State<SalesReport> {
       ),
       backgroundColor: const Color.fromARGB(255, 248, 246, 246),
       body: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         child: SafeArea(
             child: Consumer<HomeProvider>(builder: (context, value, child) {
-          int len = value.salesreportdata?.data?.length ?? 0;
+          int? len = value.salesreportdata?.data?.length;
           if (value.salesreportdata?.data != null) {
             totalAmount = 0;
-            for (int i = 0; i < len; i++) {
+            for (int i = 0; i < len!; i++) {
               totalAmount += double.parse(
                   "${value.salesreportdata?.data![i].totalGrossAmount}");
             }
@@ -246,6 +246,7 @@ class _SalesReportState extends State<SalesReport> {
                                                     onChanged: (val) {
                                                       value.getselectedmode(
                                                           val!);
+
                                                       setState(
                                                         () {},
                                                       );
@@ -270,7 +271,9 @@ class _SalesReportState extends State<SalesReport> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Payment Source",
+                              value.selectedmode == null
+                                  ? "Payment Source"
+                                  : value.selectedmodename.toString(),
                               style: FontPalette.black13500,
                               maxLines: 2,
                             ),
@@ -362,7 +365,9 @@ class _SalesReportState extends State<SalesReport> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Payment Sub",
+                              value.selectedsub == null
+                                  ? "Payment Sub"
+                                  : value.selectedsubname.toString(),
                               style: FontPalette.black13500,
                               maxLines: 2,
                             ),
@@ -389,6 +394,12 @@ class _SalesReportState extends State<SalesReport> {
                             borderRadius: 4.r,
                             title: "Show",
                             onPressed: () async {
+                              // if (value.selectedmode == null) {
+                              //   Helpers.showToast("Please choose payment mode");
+                              // } else
+                              // if (value.selectedsub == null) {
+                              //   Helpers.showToast("Please choose payment sub");
+                              // } else {
                               isLoading.value = true;
                               totalAmount = 0;
                               await value.getsalesreport(
@@ -499,87 +510,152 @@ class _SalesReportState extends State<SalesReport> {
               ).horizontalPadding(20.w),
               10.verticalSpace,
               len == 0
-                  ? const SizedBox()
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 400.h,
-                            child: ListView.separated(
-                                scrollDirection: Axis.vertical,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) {
-                                  DateTime dateTime = DateTime.parse(
-                                      "${value.salesreportdata?.data![index].invoiceDateTime}");
+                  ? const SizedBox(
+                      child: Text("No data found"),
+                    )
+                  : value.salesreportdata?.data != null
+                      ? SizedBox(
+                          height: 400.h,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(7.r),
+                                  color:
+                                      const Color.fromARGB(255, 238, 236, 236),
+                                ),
+                                child: DataTable(
+                                  columns: const <DataColumn>[
+                                    DataColumn(
+                                      label: Text('Inv No'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Inv Date'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('GrossAmt'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Mode'),
+                                    ),
+                                  ],
+                                  rows: value.salesreportdata!.data!
+                                      .map((invoice) {
+                                    DateTime dateTime = DateTime.parse(
+                                        "${invoice.invoiceDateTime}");
 
-                                  // Convert to Indian Standard Time (IST)
-                                  tz.Location ist =
-                                      tz.getLocation('Asia/Kolkata');
-                                  tz.TZDateTime istDateTime =
-                                      tz.TZDateTime.from(dateTime, ist);
+                                    // Convert to Indian Standard Time (IST)
+                                    tz.Location ist =
+                                        tz.getLocation('Asia/Kolkata');
+                                    tz.TZDateTime istDateTime =
+                                        tz.TZDateTime.from(dateTime, ist);
 
-                                  // Format the date/time in IST
-                                  String formattedDateTime =
-                                      DateFormat('dd-MM-yyyy HH:mm:ss a')
-                                          .format(istDateTime);
+                                    // Format the date/time in IST
+                                    String formattedDateTime =
+                                        DateFormat('dd-MM-yyyy HH:mm:ss a')
+                                            .format(istDateTime);
 
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        boxShadow: [
-                                          BoxShadow(
-                                              blurRadius: 10.r,
-                                              color: const Color.fromARGB(
-                                                  255, 217, 215, 215))
-                                        ],
-                                        borderRadius:
-                                            BorderRadius.circular(7.r),
-                                        border: Border.all(color: Colors.grey)),
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Inv No: ${value.salesreportdata?.data![index].invoiceNo}",
-                                              style: FontPalette.black11500,
-                                            ),
-                                            Text(
-                                              "Inv Date: $formattedDateTime",
-                                              style: FontPalette.black11300,
-                                            )
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Gross Amt: Rs ${value.salesreportdata?.data![index].totalGrossAmount}",
-                                              style: FontPalette.black13500,
-                                            ),
-                                            Text(
-                                              "Mode: ${value.salesreportdata?.data![index].paymentModeName}",
-                                              style: FontPalette.black13500,
-                                            )
-                                          ],
-                                        )
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(Text("${invoice.invoiceNo}")),
+                                        DataCell(Text(formattedDateTime)),
+                                        DataCell(Text(invoice.totalGrossAmount
+                                            .toString())),
+                                        DataCell(Text(invoice.paymentModeName
+                                            .toString())),
                                       ],
-                                    )
-                                        .verticalPadding(7.h)
-                                        .horizontalPadding(8.w),
-                                  ).horizontalPadding(20.w);
-                                },
-                                separatorBuilder: (context, index) =>
-                                    10.verticalSpace,
-                                itemCount: value.salesreportdata!.data!.length),
+                                    );
+                                  }).toList(),
+                                ),
+                              ).horizontalPadding(20.w),
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-              len == 0
+                        )
+                      : const SizedBox(),
+
+              // SingleChildScrollView(
+              //     child: Column(
+              //       children: [
+              //         SizedBox(
+              //           height: 400.h,
+              //           child: ListView.separated(
+              //               scrollDirection: Axis.vertical,
+              //               physics: const AlwaysScrollableScrollPhysics(),
+              //               shrinkWrap: true,
+              //               itemBuilder: (context, index) {
+              //                 DateTime dateTime = DateTime.parse(
+              //                     "${value.salesreportdata?.data![index].invoiceDateTime}");
+
+              //                 // Convert to Indian Standard Time (IST)
+              //                 tz.Location ist =
+              //                     tz.getLocation('Asia/Kolkata');
+              //                 tz.TZDateTime istDateTime =
+              //                     tz.TZDateTime.from(dateTime, ist);
+
+              //                 // Format the date/time in IST
+              //                 String formattedDateTime =
+              //                     DateFormat('dd-MM-yyyy HH:mm:ss a')
+              //                         .format(istDateTime);
+
+              //                 return Container(
+              //                   decoration: BoxDecoration(
+              //                       color: Colors.white,
+              //                       boxShadow: [
+              //                         BoxShadow(
+              //                             blurRadius: 10.r,
+              //                             color: const Color.fromARGB(
+              //                                 255, 217, 215, 215))
+              //                       ],
+              //                       borderRadius:
+              //                           BorderRadius.circular(7.r),
+              //                       border: Border.all(color: Colors.grey)),
+              //                   child: Column(
+              //                     children: [
+              //                       Row(
+              //                         mainAxisAlignment:
+              //                             MainAxisAlignment.spaceBetween,
+              //                         children: [
+              //                           Text(
+              //                             "Inv No: ${value.salesreportdata?.data![index].invoiceNo}",
+              //                             style: FontPalette.black11500,
+              //                           ),
+              //                           Text(
+              //                             "Inv Date: $formattedDateTime",
+              //                             style: FontPalette.black11300,
+              //                           )
+              //                         ],
+              //                       ),
+              //                       Row(
+              //                         mainAxisAlignment:
+              //                             MainAxisAlignment.spaceBetween,
+              //                         children: [
+              //                           Text(
+              //                             "Gross Amt: Rs ${value.salesreportdata?.data![index].totalGrossAmount}",
+              //                             style: FontPalette.black13500,
+              //                           ),
+              //                           Text(
+              //                             "Mode: ${value.salesreportdata?.data![index].paymentModeName}",
+              //                             style: FontPalette.black13500,
+              //                           )
+              //                         ],
+              //                       )
+              //                     ],
+              //                   )
+              //                       .verticalPadding(7.h)
+              //                       .horizontalPadding(8.w),
+              //                 ).horizontalPadding(20.w);
+              //               },
+              //               separatorBuilder: (context, index) =>
+              //                   10.verticalSpace,
+              //               itemCount:
+              //                   value.salesreportdata?.data?.length ?? 0),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              len == 0 || len == null
                   ? const SizedBox()
                   : CustomContainer(
                       // boxcolor: "#000000",
