@@ -88,7 +88,7 @@ class Services implements BaseServices {
           {String? startdate, String? enddate, int? modeid}) {
     return safe(getRequest(
             endPoint:
-                "PurchaseReport/Payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=$modeid")) //date format 2024-04-01,2024-03-05
+                "PurchaseReport/Payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=${modeid == null || modeid == -1 ? '' : modeid}")) //date format 2024-04-01,2024-03-05
         .thenRight(checkHttpStatus)
         .thenRight(parseJson)
         .mapRight((right) {
@@ -147,7 +147,7 @@ class Services implements BaseServices {
       {String? startdate, String? enddate, int? modeid, int? subid}) {
     return safe(getRequest(
             endPoint:
-                "SalesReport/payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=${modeid ?? ''}&PaymentSub_Id=${subid ?? ''}"))
+                "SalesReport/payment?DateFrom=$startdate&DateTo=$enddate&PaymentMode_Id=${modeid == null || modeid == -1 ? '' : modeid}&PaymentSub_Id=${subid == null || subid == -1 ? '' : subid}"))
         // date format 2024-04-01,2024-03-05
 
         .thenRight(checkHttpStatus)

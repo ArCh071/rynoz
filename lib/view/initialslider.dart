@@ -10,6 +10,7 @@ import 'package:rynoz/helper/helpers.dart';
 import 'package:rynoz/view/home.dart';
 import 'package:rynoz/view/reset_password.dart';
 import 'package:rynoz/view_model/home_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InitialSliderScreen extends StatefulWidget {
   const InitialSliderScreen({Key? key}) : super(key: key);
@@ -168,7 +169,9 @@ class _Slider extends StatelessWidget {
         Align(
           alignment: Alignment.topRight,
           child: InkWell(
-            onTap: () {
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              prefs.setBool("check", true);
               // controller?.jumpToPage(4);
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => const FinalSlider(),

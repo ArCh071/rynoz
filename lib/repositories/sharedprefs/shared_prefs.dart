@@ -92,6 +92,14 @@ class SharedPrefs {
   }
 
   Future<void> clearall() async {
-    await preferences?.clear();
+    await preferences?.remove("id");
+    await preferences?.remove("name");
+    await preferences?.remove("phone");
+    await preferences?.remove("email");
+    await preferences?.remove("address");
+    await preferences?.remove("nation");
+    await preferences?.remove("state");
+    await preferences?.remove("pin");
+    await preferences?.remove("icon");
   }
 }

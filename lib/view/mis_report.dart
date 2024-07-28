@@ -1,15 +1,23 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
+import 'package:rynoz/datamodel/misreport_datamodel.dart';
 import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
+import 'package:rynoz/helper/helpers.dart';
 import 'package:rynoz/view_model/home_provider.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:pdf/widgets.dart' as pw;
 
 class MisReport extends StatefulWidget {
   const MisReport({super.key});
@@ -40,6 +48,60 @@ class _MisReportState extends State<MisReport> {
     ['', '', '', ''],
     ['', '', '', ''],
   ];
+  Future<void> _savePdf(Uint8List pdfData) async {
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    final directory = await getExternalStorageDirectory();
+    final file = File("${downloadsDirectory.path}/mis_report.pdf");
+    await file.writeAsBytes(pdfData);
+
+    // Share.shareFiles([file.path], text: 'Here is the PDF file.');
+    // Printing.sharePdf(bytes: pdfData, filename: 'mis_report.pdf');
+  }
+
+  Future<Uint8List> generatePdf(MisreportDatamodel invoices) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    const int rowsPerPage = 28; // Adjust this value as needed
+    int pageCount = (invoices.data!.length / rowsPerPage).ceil();
+    for (int page = 0; page < pageCount; page++) {
+      final List<Data> pageInvoices =
+          invoices.data!.skip(page * rowsPerPage).take(rowsPerPage).toList();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.TableHelper.fromTextArray(
+              headers: ['Inv No', 'Inv Date', 'GrossAmt', 'Mode'],
+              data: pageInvoices.map((invoice) {
+                DateTime dateTime =
+                    DateTime.parse(invoice.invoiceDateTime.toString());
+                tz.Location ist = tz.getLocation('Asia/Kolkata');
+                tz.TZDateTime istDateTime = tz.TZDateTime.from(dateTime, ist);
+                String formattedDateTime =
+                    DateFormat('dd-MM-yyyy HH:mm:ss a').format(istDateTime);
+
+                return [
+                  invoice.invoiceNo,
+                  formattedDateTime,
+                  invoice.totalGrossAmount.toString(),
+                  invoice.paymentModeName.toString(),
+                ];
+              }).toList(),
+              cellStyle: pw.TextStyle(font: font),
+              headerStyle:
+                  pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
+  }
+
+  final ValueNotifier<bool> isLoadingpdf = ValueNotifier(false);
+
   final List<String> headers = [
     'S No',
     'Invoice No',
@@ -531,98 +593,35 @@ class _MisReportState extends State<MisReport> {
                           );
                         }),
                   ),
-                  InkWell(
-                      onTap: () {
-                        showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SizedBox(
-                                  height: 250.h,
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Select File Type",
-                                            style: FontPalette.black16700,
-                                          ),
-                                          InkWell(
-                                              onTap: () =>
-                                                  Navigator.of(context).pop(),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 35,
-                                                color: Colors.grey,
-                                              ))
-                                        ],
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isLoadingpdf,
+                    builder: (context, values, child) {
+                      return InkWell(
+                          onTap: () async {
+                            if (value.misreportdata != null) {
+                              isLoadingpdf.value = true;
+                              final pdfData =
+                                  await generatePdf(value.misreportdata!);
+                              await _savePdf(pdfData);
+                              isLoadingpdf.value = false;
+                              Helpers.showToast("File Downloaded");
+                            }
+                          },
+                          child: SizedBox(
+                              width: 50.w,
+                              // height: 40.h,
+                              child: isLoadingpdf.value == true
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.green,
                                       ),
-                                      18.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "PDF",
-                                            style: FontPalette.black14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#37C423"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Excel",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Doc",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                      .verticalPadding(20.h)
-                                      .horizontalPadding(20.w));
-                            });
-                      },
-                      child: Image.asset("assets/pdf.png"))
+                                    )
+                                  : Image.asset(
+                                      "assets/pdf.png",
+                                      fit: BoxFit.cover,
+                                    )));
+                    },
+                  )
                 ],
               ).horizontalPadding(20.w),
               10.verticalSpace,

@@ -1,13 +1,22 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
+import 'package:rynoz/datamodel/stockreport_datamodel.dart';
 import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
+import 'package:rynoz/helper/helpers.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:rynoz/view_model/home_provider.dart';
+
+import 'package:pdf/widgets.dart' as pw;
 
 class StockReport extends StatefulWidget {
   const StockReport({super.key});
@@ -34,6 +43,174 @@ class _StockReportState extends State<StockReport> {
     'Invoice Date',
     'Header 4'
   ];
+
+  Future<void> _savePdf(Uint8List pdfData) async {
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    final directory = await getExternalStorageDirectory();
+    final file = File("${downloadsDirectory.path}/stock_report.pdf");
+    await file.writeAsBytes(pdfData);
+
+    // Share.shareFiles([file.path], text: 'Here is the PDF file.');
+    // Printing.sharePdf(bytes: pdfData, filename: 'sales_report.pdf');
+  }
+
+  Future<Uint8List> generatePdf(StockreportDatamodel invoices) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    const int rowsPerPage = 28; // Adjust this value as needed
+    int pageCount = (invoices.data!.length / rowsPerPage).ceil();
+
+    for (int page = 0; page < pageCount; page++) {
+      final List<Data> pageInvoices =
+          invoices.data!.skip(page * rowsPerPage).take(rowsPerPage).toList();
+
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.Table(
+              border: pw.TableBorder.all(),
+              children: [
+                pw.TableRow(
+                  children: [
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('Product Id',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('Barcode',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 3,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('Product Name',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('Stock',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('Stock Value',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.all(7),
+                        child: pw.Text('GrossAmt',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                                font: font, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+                ...pageInvoices.map((invoice) {
+                  return pw.TableRow(
+                    children: [
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(invoice.productID.toString(),
+                              textAlign: pw.TextAlign.center),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(invoice.barcode.toString(),
+                              textAlign: pw.TextAlign.center),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 3,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.centerLeft,
+                          child: pw.Text(invoice.productName.toString(),
+                              textAlign: pw.TextAlign.center, softWrap: true),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(invoice.stock.toString(),
+                              textAlign: pw.TextAlign.center),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(invoice.stockValue.toString(),
+                              textAlign: pw.TextAlign.center),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(7),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(invoice.mrp.toString(),
+                              textAlign: pw.TextAlign.center),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ],
+            );
+          },
+        ),
+      );
+    }
+
+    return pdf.save();
+  }
+
   double totalAmount = 0;
   // int? selectedbranch = 0;
 
@@ -49,6 +226,8 @@ class _StockReportState extends State<StockReport> {
     'Average rate'
   ];
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
+  final ValueNotifier<bool> isLoadingpdf = ValueNotifier(false);
+
   final TextEditingController barcode = TextEditingController();
   // final TextEditingController baseon = TextEditingController();
   final TextEditingController productname = TextEditingController();
@@ -414,98 +593,123 @@ class _StockReportState extends State<StockReport> {
                           );
                         }),
                   ),
-                  InkWell(
-                      onTap: () {
-                        showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SizedBox(
-                                  height: 250.h,
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Select File Type",
-                                            style: FontPalette.black16700,
-                                          ),
-                                          InkWell(
-                                              onTap: () =>
-                                                  Navigator.of(context).pop(),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 35,
-                                                color: Colors.grey,
-                                              ))
-                                        ],
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isLoadingpdf,
+                    builder: (context, values, child) {
+                      return InkWell(
+                          onTap: () async {
+                            if (value.stockreportdata != null) {
+                              isLoadingpdf.value = true;
+                              final pdfData =
+                                  await generatePdf(value.stockreportdata!);
+                              await _savePdf(pdfData);
+                              isLoadingpdf.value = false;
+                              Helpers.showToast("File Downloaded");
+                            }
+                            // showModalBottomSheet(
+                            //     context: context,
+                            //     builder: (BuildContext context) {
+                            //       return SizedBox(
+                            //           height: 250.h,
+                            //           child: Column(
+                            //             children: [
+                            //               Row(
+                            //                 mainAxisAlignment:
+                            //                     MainAxisAlignment.spaceBetween,
+                            //                 children: [
+                            //                   Text(
+                            //                     "Select File Type",
+                            //                     style: FontPalette.black16700,
+                            //                   ),
+                            //                   InkWell(
+                            //                       onTap: () =>
+                            //                           Navigator.of(context).pop(),
+                            //                       child: const Icon(
+                            //                         Icons.close,
+                            //                         size: 35,
+                            //                         color: Colors.grey,
+                            //                       ))
+                            //                 ],
+                            //               ),
+                            //               18.verticalSpace,
+                            //               Row(
+                            //                 mainAxisAlignment:
+                            //                     MainAxisAlignment.spaceBetween,
+                            //                 children: [
+                            //                   Text(
+                            //                     "PDF",
+                            //                     style: FontPalette.black14500,
+                            //                   ),
+                            //                   Radio(
+                            //                       activeColor: HexColor("#37C423"),
+                            //                       value: 1,
+                            //                       groupValue: 1,
+                            //                       onChanged: (val) {})
+                            //                 ],
+                            //               ),
+                            //               10.verticalSpace,
+                            //               Container(
+                            //                 height: 1.h,
+                            //                 color: HexColor("#F0EBEB"),
+                            //               ),
+                            //               10.verticalSpace,
+                            //               Row(
+                            //                 mainAxisAlignment:
+                            //                     MainAxisAlignment.spaceBetween,
+                            //                 children: [
+                            //                   Text(
+                            //                     "Excel",
+                            //                     style: FontPalette.grey14500,
+                            //                   ),
+                            //                   Radio(
+                            //                       activeColor: HexColor("#B9B5B5"),
+                            //                       value: 1,
+                            //                       groupValue: 1,
+                            //                       onChanged: (val) {})
+                            //                 ],
+                            //               ),
+                            //               10.verticalSpace,
+                            //               Container(
+                            //                 height: 1.h,
+                            //                 color: HexColor("#F0EBEB"),
+                            //               ),
+                            //               10.verticalSpace,
+                            //               Row(
+                            //                 mainAxisAlignment:
+                            //                     MainAxisAlignment.spaceBetween,
+                            //                 children: [
+                            //                   Text(
+                            //                     "Doc",
+                            //                     style: FontPalette.grey14500,
+                            //                   ),
+                            //                   Radio(
+                            //                       activeColor: HexColor("#B9B5B5"),
+                            //                       value: 1,
+                            //                       groupValue: 1,
+                            //                       onChanged: (val) {})
+                            //                 ],
+                            //               ),
+                            //             ],
+                            //           )
+                            //               .verticalPadding(20.h)
+                            //               .horizontalPadding(20.w));
+                            //     });
+                          },
+                          child: SizedBox(
+                              width: 50.w,
+                              // height: 40.h,
+                              child: isLoadingpdf.value == true
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.green,
                                       ),
-                                      18.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "PDF",
-                                            style: FontPalette.black14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#37C423"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Excel",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Doc",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                      .verticalPadding(20.h)
-                                      .horizontalPadding(20.w));
-                            });
-                      },
-                      child: Image.asset("assets/pdf.png"))
+                                    )
+                                  : Image.asset(
+                                      "assets/pdf.png",
+                                      fit: BoxFit.cover,
+                                    )));
+                    },
+                  )
                 ],
               ).horizontalPadding(20.w),
               10.verticalSpace,
@@ -536,6 +740,12 @@ class _StockReportState extends State<StockReport> {
                                       label: Text('Product Name'),
                                     ),
                                     DataColumn(
+                                      label: Text('Stock'),
+                                    ),
+                                    DataColumn(
+                                      label: Text('Stock Value'),
+                                    ),
+                                    DataColumn(
                                       label: Text('GrossAmt'),
                                     ),
                                   ],
@@ -547,6 +757,10 @@ class _StockReportState extends State<StockReport> {
                                         DataCell(Text("${invoice.barcode}")),
                                         DataCell(Text(
                                             invoice.productName.toString())),
+                                        DataCell(
+                                            Text(invoice.stock.toString())),
+                                        DataCell(Text(
+                                            invoice.stockValue.toString())),
                                         DataCell(Text(invoice.mrp.toString())),
                                       ],
                                     );

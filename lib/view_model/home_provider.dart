@@ -54,14 +54,24 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
   String? selectedmodename;
   String? selectedsubname;
   getselectedmode(int val) {
-    selectedmode = val;
-    selectedmodename = paymentmode?.data![val].paymentModeName;
+    if (val == -1) {
+      selectedmode = 0;
+      selectedmodename = "All";
+    } else {
+      selectedmode = val;
+      selectedmodename = paymentmode?.data![val].paymentModeName;
+    }
     notifyListeners();
   }
 
   getselectedsub(int val) {
-    selectedsub = val;
-    selectedsubname = paymentsub?.data![val].paymentSubName;
+    if (val == -1) {
+      selectedsub = 0;
+      selectedsubname = "All";
+    } else {
+      selectedsub = val;
+      selectedsubname = paymentsub?.data![val].paymentSubName;
+    }
     notifyListeners();
   }
 
@@ -105,8 +115,13 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
   String? purselectedmodename;
 
   getpurselectedmode(int val) {
-    purselectedmode = val;
-    purselectedmodename = paymentmode?.data![val].paymentModeName;
+    if (val == -1) {
+      purselectedmode = 0;
+      purselectedmodename = "All";
+    } else {
+      purselectedmode = val;
+      purselectedmodename = paymentmode?.data![val].paymentModeName;
+    }
     notifyListeners();
   }
 
@@ -226,12 +241,10 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
       await services.login(password: password, username: username).fold(
         (left) {
           logindata = null;
-          print(left.message);
           Helpers.showToast("${left.message}");
           // updateVehicleTypeLoaderState(LoaderState.error);
         },
         (right) {
-          print(right);
           if (right.status == 200 && right.data != null) {
             logindata = right;
             sharedPrefs.saveid(id: "${logindata?.data![0].userId}");
@@ -637,6 +650,7 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
       {String? startdate, String? endate, int? modeid, int? subid}) async {
     updatepurchasereportdataLoaderState(LoaderState.loading);
     final network = await Helpers.isInternetAvailable();
+
     if (network) {
       await services
           .salesreport(
@@ -748,7 +762,7 @@ class HomeProvider extends ProviderHelperClass with ChangeNotifier {
               type: type)
           .fold(
         (left) {
-          salesreportdata = null;
+          stockreportdata = null;
           Helpers.showToast("${left.message}");
           updatestockereportdataLoaderState(LoaderState.error);
         },

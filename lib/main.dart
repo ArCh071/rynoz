@@ -11,15 +11,13 @@ import 'package:rynoz/view_model/home_provider.dart';
 void setUp() async {
   GetIt.instance.registerSingleton<BaseServices>(Services());
   GetIt.instance.registerSingleton<SharedPrefs>(SharedPrefs());
-  // GetIt.instance.registerFactory<AuthServices>(() => AuthServices());
-  // GetIt.instance.registerFactory<HomeServices>(() => HomeServices());
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp();
+
   await ScreenUtil.ensureScreenSize();
   setUp();
   runApp(const MyApp());
@@ -33,18 +31,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ChangeNotifierProvider.value(
-        //   value: AuthServices(),
-        // ),
-        ChangeNotifierProvider.value(
-          value: HomeProvider(),
-        ),
+        ChangeNotifierProvider<HomeProvider>(
+            create: (context) => HomeProvider()),
       ],
       child: ScreenUtilInit(
           designSize: const Size(360, 690),
           builder: (context, child) {
             return MaterialApp(
-              title: 'Rynoz',
+              title: 'Rynosoft',
               theme: ThemeData(
                 colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                 useMaterial3: true,

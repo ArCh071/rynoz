@@ -1,9 +1,15 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
+import 'package:rynoz/datamodel/getpurchasereport_datamodel.dart';
 import 'package:rynoz/helper/helpers.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -11,6 +17,7 @@ import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
 import 'package:rynoz/view_model/home_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class PurchaseReport extends StatefulWidget {
   const PurchaseReport({super.key});
@@ -20,16 +27,8 @@ class PurchaseReport extends StatefulWidget {
 }
 
 class _PurchaseReportState extends State<PurchaseReport> {
-  final List<List<String>> tableData = [
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
-    ['', '', '', ''],
+  List<Map> paymentmode = [
+    {"name": "All", "id": 00}
   ];
   DateTime? selectedDateend = DateTime.now();
   @override
@@ -37,6 +36,13 @@ class _PurchaseReportState extends State<PurchaseReport> {
     final home = context.read<HomeProvider>();
     home.purendate = DateFormat('dd MMMyy').format(selectedDateend!);
     home.purstartdate = DateFormat('dd MMMyy').format(selectedDateend!);
+    int len1 = home.paymentmode?.data?.length ?? 0;
+    for (int i = 0; i < len1; i++) {
+      paymentmode.add({
+        "name": home.paymentmode?.data![i].paymentModeName,
+        "id": home.paymentmode?.data![i].paymentModeId
+      });
+    }
     super.initState();
   }
 
@@ -60,6 +66,61 @@ class _PurchaseReportState extends State<PurchaseReport> {
     'Payment Mode',
     'Header 4'
   ];
+
+  Future<void> _savePdf(Uint8List pdfData) async {
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    final directory = await getExternalStorageDirectory();
+    final file = File("${downloadsDirectory.path}/purchase_report.pdf");
+    await file.writeAsBytes(pdfData);
+
+    // Share.shareFiles([file.path], text: 'Here is the PDF file.');
+    // Printing.sharePdf(bytes: pdfData, filename: 'purchase_report.pdf');
+  }
+
+  final ValueNotifier<bool> isLoadingpdf = ValueNotifier(false);
+
+  Future<Uint8List> generatePdf(GetPurchasereportdatamodel invoices) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    const int rowsPerPage = 28; // Adjust this value as needed
+    int pageCount = (invoices.data!.length / rowsPerPage).ceil();
+    for (int page = 0; page < pageCount; page++) {
+      final List<Data> pageInvoices =
+          invoices.data!.skip(page * rowsPerPage).take(rowsPerPage).toList();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.TableHelper.fromTextArray(
+              headers: ['Inv No', 'Inv Date', 'GrossAmt', 'Mode'],
+              data: pageInvoices.map((invoice) {
+                DateTime dateTime =
+                    DateTime.parse(invoice.voucherDateTime.toString());
+                tz.Location ist = tz.getLocation('Asia/Kolkata');
+                tz.TZDateTime istDateTime = tz.TZDateTime.from(dateTime, ist);
+                String formattedDateTime =
+                    DateFormat('dd-MM-yyyy HH:mm:ss a').format(istDateTime);
+
+                return [
+                  invoice.invoiceNo,
+                  formattedDateTime,
+                  invoice.totalGrossAmount.toString(),
+                  invoice.paymentModeName.toString(),
+                ];
+              }).toList(),
+              cellStyle: pw.TextStyle(font: font),
+              headerStyle:
+                  pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
+  }
+
   int? selected = 0;
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
 
@@ -79,10 +140,10 @@ class _PurchaseReportState extends State<PurchaseReport> {
       backgroundColor: const Color.fromARGB(255, 248, 246, 246),
       body: SafeArea(
           child: Consumer<HomeProvider>(builder: (context, home, child) {
-        int len = home.purchasereportdata?.data?.length ?? 0;
+        int? len = home.purchasereportdata?.data?.length;
         if (home.purchasereportdata?.data != null) {
           totalAmount = 0;
-          for (int i = 0; i < len; i++) {
+          for (int i = 0; i < len!; i++) {
             totalAmount += double.parse(
                 "${home.purchasereportdata?.data![i].totalGrossAmount}");
           }
@@ -229,15 +290,14 @@ class _PurchaseReportState extends State<PurchaseReport> {
                                     18.verticalSpace,
                                     ListView.builder(
                                         shrinkWrap: true,
-                                        itemCount:
-                                            home.paymentmode?.data?.length ?? 0,
+                                        itemCount: paymentmode.length,
                                         itemBuilder: (context, index) {
                                           return Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                "${home.paymentmode?.data![index].paymentModeName}",
+                                                "${paymentmode[index]["name"]}",
                                                 style: FontPalette.black14500,
                                               ),
                                               Radio(
@@ -248,7 +308,7 @@ class _PurchaseReportState extends State<PurchaseReport> {
                                                       home.purselectedmode,
                                                   onChanged: (val) {
                                                     home.getpurselectedmode(
-                                                        val!);
+                                                        val! - 1);
                                                     setState(
                                                       () {},
                                                     );
@@ -297,18 +357,20 @@ class _PurchaseReportState extends State<PurchaseReport> {
                       valueListenable: isLoading,
                       builder: (context, value, child) {
                         return CustomButton(
-                          isLoading: isLoading.value,
-                          height: 40.h,
-                          borderRadius: 4.r,
-                          title: "Show",
-                          onPressed: () async {
-                            if (home.purselectedmode == null) {
-                              Helpers.showToast("Please choose payment mode");
-                            } else {
+                            isLoading: isLoading.value,
+                            height: 40.h,
+                            borderRadius: 4.r,
+                            title: "Show",
+                            onPressed: () async {
+                              // if (home.purselectedmode == null) {
+                              //   Helpers.showToast("Please choose payment mode");
+                              // } else {
                               isLoading.value = true;
                               totalAmount = 0;
                               await home.getpurchasereport(
-                                modeid: home.purselectedmode,
+                                modeid: home.purselectedmode != null
+                                    ? home.purselectedmode! - 1
+                                    : home.purselectedmode,
                                 startdate:
                                     "${selectedDatestart?.year}-${selectedDatestart?.month}-${selectedDatestart?.day}",
                                 endate:
@@ -316,102 +378,39 @@ class _PurchaseReportState extends State<PurchaseReport> {
                               );
                               isLoading.value = false;
                             }
-                          },
-                        );
+                            // },
+                            );
                       }),
                 ),
-                InkWell(
-                    onTap: () {
-                      showModalBottomSheet(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return SizedBox(
-                                height: 250.h,
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Select File Type",
-                                          style: FontPalette.black16700,
-                                        ),
-                                        InkWell(
-                                            onTap: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Icon(
-                                              Icons.close,
-                                              size: 35,
-                                              color: Colors.grey,
-                                            ))
-                                      ],
+                ValueListenableBuilder<bool>(
+                  valueListenable: isLoadingpdf,
+                  builder: (context, values, child) {
+                    return InkWell(
+                        onTap: () async {
+                          if (home.purchasereportdata != null) {
+                            isLoadingpdf.value = true;
+                            final pdfData =
+                                await generatePdf(home.purchasereportdata!);
+                            await _savePdf(pdfData);
+                            isLoadingpdf.value = false;
+                            Helpers.showToast("File Downloaded");
+                          }
+                        },
+                        child: SizedBox(
+                            width: 50.w,
+                            // height: 40.h,
+                            child: isLoadingpdf.value == true
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.green,
                                     ),
-                                    18.verticalSpace,
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "PDF",
-                                          style: FontPalette.black14500,
-                                        ),
-                                        Radio(
-                                            activeColor: HexColor("#37C423"),
-                                            value: 1,
-                                            groupValue: 1,
-                                            onChanged: (val) {})
-                                      ],
-                                    ),
-                                    10.verticalSpace,
-                                    Container(
-                                      height: 1.h,
-                                      color: HexColor("#F0EBEB"),
-                                    ),
-                                    10.verticalSpace,
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Excel",
-                                          style: FontPalette.grey14500,
-                                        ),
-                                        Radio(
-                                            activeColor: HexColor("#B9B5B5"),
-                                            value: 1,
-                                            groupValue: 1,
-                                            onChanged: (val) {})
-                                      ],
-                                    ),
-                                    10.verticalSpace,
-                                    Container(
-                                      height: 1.h,
-                                      color: HexColor("#F0EBEB"),
-                                    ),
-                                    10.verticalSpace,
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Doc",
-                                          style: FontPalette.grey14500,
-                                        ),
-                                        Radio(
-                                            activeColor: HexColor("#B9B5B5"),
-                                            value: 1,
-                                            groupValue: 1,
-                                            onChanged: (val) {})
-                                      ],
-                                    ),
-                                  ],
-                                )
-                                    .verticalPadding(20.h)
-                                    .horizontalPadding(20.w));
-                          });
-                    },
-                    child: Image.asset("assets/pdf.png"))
+                                  )
+                                : Image.asset(
+                                    "assets/pdf.png",
+                                    fit: BoxFit.cover,
+                                  )));
+                  },
+                )
               ],
             ).horizontalPadding(20.w),
             10.verticalSpace,
@@ -560,7 +559,7 @@ class _PurchaseReportState extends State<PurchaseReport> {
                         ),
                       )
                     : const SizedBox(),
-            len == 0
+            len == 0 || len == null
                 ? const SizedBox()
                 : CustomContainer(
                     borderradius: 4.r,

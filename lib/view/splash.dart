@@ -5,6 +5,7 @@ import 'package:rynoz/repositories/sharedprefs/shared_prefs.dart';
 import 'package:rynoz/view/home.dart';
 import 'package:rynoz/view/initialslider.dart';
 import 'package:rynoz/view_model/home_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,7 +20,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     final home = context.read<HomeProvider>();
-
     Future.delayed(const Duration(seconds: 1), () async {
       String? id = await sharedPrefs.getid();
       if (id != null) {
@@ -45,9 +45,17 @@ class _SplashScreenState extends State<SplashScreen> {
           builder: (context) => const Home1(),
         ));
       } else {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (context) => const InitialSliderScreen(),
-        ));
+        final prefs = await SharedPreferences.getInstance();
+        bool? check = prefs.getBool("check");
+        if (check == true) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => const FinalSlider(),
+          ));
+        } else {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (context) => const InitialSliderScreen(),
+          ));
+        }
       }
     });
     super.initState();

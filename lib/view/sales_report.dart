@@ -1,6 +1,13 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
+import 'package:rynoz/datamodel/salesreport_datamodel.dart';
+import 'package:rynoz/helper/helpers.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:provider/provider.dart';
@@ -10,6 +17,7 @@ import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
 import 'package:rynoz/view_model/home_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class SalesReport extends StatefulWidget {
   const SalesReport({super.key});
@@ -19,11 +27,32 @@ class SalesReport extends StatefulWidget {
 }
 
 class _SalesReportState extends State<SalesReport> {
+  List<Map> paymentsub = [
+    {"name": "All", "id": 00}
+  ];
+  List<Map> paymentmode = [
+    {"name": "All", "id": 00}
+  ];
+
   @override
   void initState() {
     final home = context.read<HomeProvider>();
     home.endate = DateFormat('dd MMMyy').format(selectedDateend!);
     home.startdate = DateFormat('dd MMMyy').format(selectedDateend!);
+    int len = home.paymentsub?.data?.length ?? 0;
+    for (int i = 0; i < len; i++) {
+      paymentsub.add({
+        "name": home.paymentsub?.data![i].paymentSubName,
+        "id": home.paymentsub?.data![i].paymentSubId
+      });
+    }
+    int len1 = home.paymentmode?.data?.length ?? 0;
+    for (int i = 0; i < len1; i++) {
+      paymentmode.add({
+        "name": home.paymentmode?.data![i].paymentModeName,
+        "id": home.paymentmode?.data![i].paymentModeId
+      });
+    }
     super.initState();
   }
 
@@ -54,6 +83,60 @@ class _SalesReportState extends State<SalesReport> {
     // await home.getpaymentsub();
     // await home.getpaymentmode();
     await home.getsalesreport();
+  }
+
+  final ValueNotifier<bool> isLoadingpdf = ValueNotifier(false);
+
+  Future<void> _savePdf(Uint8List pdfData) async {
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    final directory = await getExternalStorageDirectory();
+    final file = File("${downloadsDirectory.path}/sales_report.pdf");
+    await file.writeAsBytes(pdfData);
+
+    // Share.shareFiles([file.path], text: 'Here is the PDF file.');
+    // Printing.sharePdf(bytes: pdfData, filename: 'sales_report.pdf');
+  }
+
+  Future<Uint8List> generatePdf(SalesreportDatamodel invoices) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    const int rowsPerPage = 28; // Adjust this value as needed
+    int pageCount = (invoices.data!.length / rowsPerPage).ceil();
+    for (int page = 0; page < pageCount; page++) {
+      final List<Data> pageInvoices =
+          invoices.data!.skip(page * rowsPerPage).take(rowsPerPage).toList();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.TableHelper.fromTextArray(
+              headers: ['Inv No', 'Inv Date', 'GrossAmt', 'Mode'],
+              data: pageInvoices.map((invoice) {
+                DateTime dateTime =
+                    DateTime.parse(invoice.invoiceDateTime.toString());
+                tz.Location ist = tz.getLocation('Asia/Kolkata');
+                tz.TZDateTime istDateTime = tz.TZDateTime.from(dateTime, ist);
+                String formattedDateTime =
+                    DateFormat('dd-MM-yyyy HH:mm:ss a').format(istDateTime);
+
+                return [
+                  invoice.invoiceNo,
+                  formattedDateTime,
+                  invoice.totalGrossAmount.toString(),
+                  invoice.paymentModeName.toString(),
+                ];
+              }).toList(),
+              cellStyle: pw.TextStyle(font: font),
+              headerStyle:
+                  pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
   }
 
   final ValueNotifier<bool> isLoading = ValueNotifier(false);
@@ -224,9 +307,7 @@ class _SalesReportState extends State<SalesReport> {
                                       18.verticalSpace,
                                       ListView.builder(
                                           shrinkWrap: true,
-                                          itemCount:
-                                              value.paymentmode?.data?.length ??
-                                                  0,
+                                          itemCount: paymentmode.length,
                                           itemBuilder: (context, index) {
                                             return Row(
                                               mainAxisAlignment:
@@ -234,7 +315,7 @@ class _SalesReportState extends State<SalesReport> {
                                                       .spaceBetween,
                                               children: [
                                                 Text(
-                                                  "${value.paymentmode?.data![index].paymentModeName}",
+                                                  "${paymentmode[index]["name"]}",
                                                   style: FontPalette.black14500,
                                                 ),
                                                 Radio(
@@ -245,7 +326,7 @@ class _SalesReportState extends State<SalesReport> {
                                                         value.selectedmode,
                                                     onChanged: (val) {
                                                       value.getselectedmode(
-                                                          val!);
+                                                          val! - 1);
 
                                                       setState(
                                                         () {},
@@ -319,9 +400,7 @@ class _SalesReportState extends State<SalesReport> {
                                       18.verticalSpace,
                                       ListView.builder(
                                           shrinkWrap: true,
-                                          itemCount:
-                                              value.paymentsub?.data?.length ??
-                                                  0,
+                                          itemCount: paymentsub.length,
                                           itemBuilder: (context, index) {
                                             return Row(
                                               mainAxisAlignment:
@@ -329,7 +408,7 @@ class _SalesReportState extends State<SalesReport> {
                                                       .spaceBetween,
                                               children: [
                                                 Text(
-                                                  "${value.paymentsub?.data![index].paymentSubName}",
+                                                  "${paymentsub[index]["name"]}",
                                                   style: FontPalette.black14500,
                                                 ),
                                                 Radio(
@@ -339,8 +418,8 @@ class _SalesReportState extends State<SalesReport> {
                                                     groupValue:
                                                         value.selectedsub,
                                                     onChanged: (val) {
-                                                      value
-                                                          .getselectedsub(val!);
+                                                      value.getselectedsub(
+                                                          val! - 1);
                                                       setState(
                                                         () {},
                                                       );
@@ -394,12 +473,6 @@ class _SalesReportState extends State<SalesReport> {
                             borderRadius: 4.r,
                             title: "Show",
                             onPressed: () async {
-                              // if (value.selectedmode == null) {
-                              //   Helpers.showToast("Please choose payment mode");
-                              // } else
-                              // if (value.selectedsub == null) {
-                              //   Helpers.showToast("Please choose payment sub");
-                              // } else {
                               isLoading.value = true;
                               totalAmount = 0;
                               await value.getsalesreport(
@@ -407,105 +480,46 @@ class _SalesReportState extends State<SalesReport> {
                                       "${selectedDatestart?.year}-${selectedDatestart?.month}-${selectedDatestart?.day}",
                                   endate:
                                       "${selectedDateend?.year}-${selectedDateend?.month}-${selectedDateend?.day}",
-                                  modeid: value.selectedmode,
-                                  subid: value.selectedsub);
+                                  modeid: value.selectedmode != null
+                                      ? value.selectedmode! - 1
+                                      : value.selectedmode,
+                                  subid: value.selectedsub != null
+                                      ? value.selectedsub! - 1
+                                      : value.selectedsub);
                               isLoading.value = false;
                             },
                           );
                         }),
                   ),
-                  InkWell(
-                      onTap: () {
-                        showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SizedBox(
-                                  height: 250.h,
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Select File Type",
-                                            style: FontPalette.black16700,
-                                          ),
-                                          InkWell(
-                                              onTap: () =>
-                                                  Navigator.of(context).pop(),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 35,
-                                                color: Colors.grey,
-                                              ))
-                                        ],
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isLoadingpdf,
+                    builder: (context, values, child) {
+                      return InkWell(
+                          onTap: () async {
+                            if (value.salesreportdata != null) {
+                              isLoadingpdf.value = true;
+                              final pdfData =
+                                  await generatePdf(value.salesreportdata!);
+                              await _savePdf(pdfData);
+                              isLoadingpdf.value = false;
+                              Helpers.showToast("File Downloaded");
+                            }
+                          },
+                          child: SizedBox(
+                              width: 50.w,
+                              // height: 40.h,
+                              child: isLoadingpdf.value == true
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.green,
                                       ),
-                                      18.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "PDF",
-                                            style: FontPalette.black14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#37C423"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Excel",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Doc",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                      .verticalPadding(20.h)
-                                      .horizontalPadding(20.w));
-                            });
-                      },
-                      child: Image.asset("assets/pdf.png"))
+                                    )
+                                  : Image.asset(
+                                      "assets/pdf.png",
+                                      fit: BoxFit.cover,
+                                    )));
+                    },
+                  )
                 ],
               ).horizontalPadding(20.w),
               10.verticalSpace,

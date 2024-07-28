@@ -1,14 +1,22 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:rynoz/commonwidget/custombutton.dart';
 import 'package:rynoz/commonwidget/customcontainer.dart';
+import 'package:rynoz/datamodel/getvatreport_datamodel.dart';
 import 'package:rynoz/helper/color_palette.dart';
 import 'package:rynoz/helper/extension.dart';
 import 'package:rynoz/helper/font_palette.dart';
+import 'package:rynoz/helper/helpers.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:pdf/widgets.dart' as pw;
 import 'package:rynoz/view_model/home_provider.dart';
 
 class VatReport extends StatefulWidget {
@@ -27,6 +35,60 @@ class _VatReportState extends State<VatReport> {
     home.vatendate = DateFormat('dd MMMyy').format(selectedDateend!);
     home.vatstartdate = DateFormat('dd MMMyy').format(selectedDateend!);
     super.initState();
+  }
+
+  final ValueNotifier<bool> isLoadingpdf = ValueNotifier(false);
+
+  Future<void> _savePdf(Uint8List pdfData) async {
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    final directory = await getExternalStorageDirectory();
+    final file = File("${downloadsDirectory.path}/vat_report.pdf");
+    await file.writeAsBytes(pdfData);
+
+    // Share.shareFiles([file.path], text: 'Here is the PDF file.');
+    // Printing.sharePdf(bytes: pdfData, filename: 'vat_report.pdf');
+  }
+
+  Future<Uint8List> generatePdf(GetVATreportDatamodel invoices) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    const int rowsPerPage = 28; // Adjust this value as needed
+    int pageCount = (invoices.data!.length / rowsPerPage).ceil();
+    for (int page = 0; page < pageCount; page++) {
+      final List<Data> pageInvoices =
+          invoices.data!.skip(page * rowsPerPage).take(rowsPerPage).toList();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.TableHelper.fromTextArray(
+              headers: ['Inv No', 'Inv Date', 'GrossAmt', 'Mode'],
+              data: pageInvoices.map((invoice) {
+                DateTime dateTime =
+                    DateTime.parse(invoice.invoiceDateTime.toString());
+                tz.Location ist = tz.getLocation('Asia/Kolkata');
+                tz.TZDateTime istDateTime = tz.TZDateTime.from(dateTime, ist);
+                String formattedDateTime =
+                    DateFormat('dd-MM-yyyy HH:mm:ss a').format(istDateTime);
+
+                return [
+                  invoice.invoiceNo,
+                  formattedDateTime,
+                  invoice.totalGrossAmount.toString(),
+                  invoice.paymentModeName.toString(),
+                ];
+              }).toList(),
+              cellStyle: pw.TextStyle(font: font),
+              headerStyle:
+                  pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.center,
+              headerAlignment: pw.Alignment.center,
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
   }
 
   final List<List<String>> tableData = [
@@ -426,185 +488,126 @@ class _VatReportState extends State<VatReport> {
                           );
                         }),
                   ),
-                  InkWell(
-                      onTap: () {
-                        showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return SizedBox(
-                                  height: 250.h,
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Select File Type",
-                                            style: FontPalette.black16700,
-                                          ),
-                                          InkWell(
-                                              onTap: () =>
-                                                  Navigator.of(context).pop(),
-                                              child: const Icon(
-                                                Icons.close,
-                                                size: 35,
-                                                color: Colors.grey,
-                                              ))
-                                        ],
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isLoadingpdf,
+                    builder: (context, values, child) {
+                      return InkWell(
+                          onTap: () async {
+                            if (value.vatreportdata != null) {
+                              isLoadingpdf.value = true;
+                              final pdfData =
+                                  await generatePdf(value.vatreportdata!);
+                              await _savePdf(pdfData);
+                              isLoadingpdf.value = false;
+                              Helpers.showToast("File Downloaded");
+                            }
+                          },
+                          child: SizedBox(
+                              width: 50.w,
+                              // height: 40.h,
+                              child: isLoadingpdf.value == true
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.green,
                                       ),
-                                      18.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "PDF",
-                                            style: FontPalette.black14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#37C423"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Excel",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                      10.verticalSpace,
-                                      Container(
-                                        height: 1.h,
-                                        color: HexColor("#F0EBEB"),
-                                      ),
-                                      10.verticalSpace,
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "Doc",
-                                            style: FontPalette.grey14500,
-                                          ),
-                                          Radio(
-                                              activeColor: HexColor("#B9B5B5"),
-                                              value: 1,
-                                              groupValue: 1,
-                                              onChanged: (val) {})
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                      .verticalPadding(20.h)
-                                      .horizontalPadding(20.w));
-                            });
-                      },
-                      child: Image.asset("assets/pdf.png"))
+                                    )
+                                  : Image.asset(
+                                      "assets/pdf.png",
+                                      fit: BoxFit.cover,
+                                    )));
+                    },
+                  )
                 ],
               ).horizontalPadding(20.w),
               10.verticalSpace,
-              len == 0
-                  ? const SizedBox()
-                  :
-                  // SingleChildScrollView(
-                  //     child: Column(
-                  //       children: [
-                  //         SizedBox(
-                  //           height: 450.h,
-                  //           child: ListView.separated(
-                  //               scrollDirection: Axis.vertical,
-                  //               physics: const AlwaysScrollableScrollPhysics(),
-                  //               shrinkWrap: true,
-                  //               itemBuilder: (context, index) {
-                  //                 DateTime dateTime = DateTime.parse(
-                  //                     "${value.vatreportdata?.data![index].invoiceDateTime}");
+              // len == 0
+              //     ? const SizedBox(
+              //         child: Text("data"),
+              //       )
+              //     :
+              // SingleChildScrollView(
+              //     child: Column(
+              //       children: [
+              //         SizedBox(
+              //           height: 450.h,
+              //           child: ListView.separated(
+              //               scrollDirection: Axis.vertical,
+              //               physics: const AlwaysScrollableScrollPhysics(),
+              //               shrinkWrap: true,
+              //               itemBuilder: (context, index) {
+              //                 DateTime dateTime = DateTime.parse(
+              //                     "${value.vatreportdata?.data![index].invoiceDateTime}");
 
-                  //                 // Convert to Indian Standard Time (IST)
-                  //                 tz.Location ist =
-                  //                     tz.getLocation('Asia/Kolkata');
-                  //                 tz.TZDateTime istDateTime =
-                  //                     tz.TZDateTime.from(dateTime, ist);
+              //                 // Convert to Indian Standard Time (IST)
+              //                 tz.Location ist =
+              //                     tz.getLocation('Asia/Kolkata');
+              //                 tz.TZDateTime istDateTime =
+              //                     tz.TZDateTime.from(dateTime, ist);
 
-                  //                 // Format the date/time in IST
-                  //                 String formattedDateTime =
-                  //                     DateFormat('dd-MM-yyyy HH:mm:ss a')
-                  //                         .format(istDateTime);
+              //                 // Format the date/time in IST
+              //                 String formattedDateTime =
+              //                     DateFormat('dd-MM-yyyy HH:mm:ss a')
+              //                         .format(istDateTime);
 
-                  //                 return Container(
-                  //                   decoration: BoxDecoration(
-                  //                       color: Colors.white,
-                  //                       boxShadow: [
-                  //                         BoxShadow(
-                  //                             blurRadius: 10.r,
-                  //                             color: const Color.fromARGB(
-                  //                                 255, 217, 215, 215))
-                  //                       ],
-                  //                       borderRadius:
-                  //                           BorderRadius.circular(7.r),
-                  //                       border: Border.all(color: Colors.grey)),
-                  //                   child: Column(
-                  //                     children: [
-                  //                       Row(
-                  //                         mainAxisAlignment:
-                  //                             MainAxisAlignment.spaceBetween,
-                  //                         children: [
-                  //                           Text(
-                  //                             "Inv No: ${value.vatreportdata?.data![index].invoiceNo}",
-                  //                             style: FontPalette.black11500,
-                  //                           ),
-                  //                           Text(
-                  //                             "Inv Date: $formattedDateTime",
-                  //                             style: FontPalette.black11300,
-                  //                           )
-                  //                         ],
-                  //                       ),
-                  //                       Row(
-                  //                         mainAxisAlignment:
-                  //                             MainAxisAlignment.spaceBetween,
-                  //                         children: [
-                  //                           Text(
-                  //                             "Gross Amt: Rs ${value.vatreportdata?.data![index].totalGrossAmount}",
-                  //                             style: FontPalette.black13500,
-                  //                           ),
-                  //                           Text(
-                  //                             "Mode: ${value.vatreportdata?.data![index].paymentModeName}",
-                  //                             style: FontPalette.black13500,
-                  //                           )
-                  //                         ],
-                  //                       )
-                  //                     ],
-                  //                   )
-                  //                       .verticalPadding(7.h)
-                  //                       .horizontalPadding(8.w),
-                  //                 ).horizontalPadding(20.w);
-                  //               },
-                  //               separatorBuilder: (context, index) =>
-                  //                   10.verticalSpace,
-                  //               itemCount: value.vatreportdata!.data!.length),
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  value.vatreportdata!.data != null
-                      ? SizedBox(
+              //                 return Container(
+              //                   decoration: BoxDecoration(
+              //                       color: Colors.white,
+              //                       boxShadow: [
+              //                         BoxShadow(
+              //                             blurRadius: 10.r,
+              //                             color: const Color.fromARGB(
+              //                                 255, 217, 215, 215))
+              //                       ],
+              //                       borderRadius:
+              //                           BorderRadius.circular(7.r),
+              //                       border: Border.all(color: Colors.grey)),
+              //                   child: Column(
+              //                     children: [
+              //                       Row(
+              //                         mainAxisAlignment:
+              //                             MainAxisAlignment.spaceBetween,
+              //                         children: [
+              //                           Text(
+              //                             "Inv No: ${value.vatreportdata?.data![index].invoiceNo}",
+              //                             style: FontPalette.black11500,
+              //                           ),
+              //                           Text(
+              //                             "Inv Date: $formattedDateTime",
+              //                             style: FontPalette.black11300,
+              //                           )
+              //                         ],
+              //                       ),
+              //                       Row(
+              //                         mainAxisAlignment:
+              //                             MainAxisAlignment.spaceBetween,
+              //                         children: [
+              //                           Text(
+              //                             "Gross Amt: Rs ${value.vatreportdata?.data![index].totalGrossAmount}",
+              //                             style: FontPalette.black13500,
+              //                           ),
+              //                           Text(
+              //                             "Mode: ${value.vatreportdata?.data![index].paymentModeName}",
+              //                             style: FontPalette.black13500,
+              //                           )
+              //                         ],
+              //                       )
+              //                     ],
+              //                   )
+              //                       .verticalPadding(7.h)
+              //                       .horizontalPadding(8.w),
+              //                 ).horizontalPadding(20.w);
+              //               },
+              //               separatorBuilder: (context, index) =>
+              //                   10.verticalSpace,
+              //               itemCount: value.vatreportdata!.data!.length),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              value.vatreportdata?.data != null
+                  ? value.vatreportdata?.data?.length == 0
+                      ? const Text("No data found")
+                      : SizedBox(
                           height: 440.h,
                           child: SingleChildScrollView(
                             scrollDirection: Axis.vertical,
@@ -663,7 +666,7 @@ class _VatReportState extends State<VatReport> {
                             ),
                           ),
                         )
-                      : const SizedBox(),
+                  : const SizedBox(),
               len == 0
                   ? const SizedBox()
                   : CustomContainer(
